@@ -109,6 +109,7 @@ function App() {
             <Contract
               state={state}
               setState={setState}
+              setPage={setPage}
               showNotification={showNotification}
             />
           )}
