@@ -158,6 +158,13 @@ export default function ApplyLoan({ state, setState, showNotification }) {
             <option value="education">Education</option>
             <option value="business">Business</option>
           </select>
+          <input
+            type="number"
+            name="requestedAmount"
+            placeholder="Requested Loan Amount"
+            required
+            min="1"
+          />
 
           <input
             type="number"

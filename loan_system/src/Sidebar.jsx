@@ -37,7 +37,9 @@ export default function Sidebar({ state }) {
       {approvedApps.length > 0 ? (
         approvedApps.map(app => (
           <div key={app.id} className="loan-item">
-            <p><strong>{app.loanType.charAt(0).toUpperCase() + app.loanType.slice(1)} Loan</strong> - ${app.approvedAmount}</p>
+            <p><strong>{app.loanType
+  ? app.loanType.charAt(0).toUpperCase() + app.loanType.slice(1)
+  : "Unknown Loan Type"} Loan</strong> - ${app.approvedAmount}</p>
             <p>Next payment: ${app.monthlyPayment} due in 30 days</p>
           </div>
         ))

@@ -9,9 +9,10 @@ import AdminPanel from "./AdminPanel";
 import Dashboard from "./Dashboard";
 import Repayment from "./Repayment";
 import Notification from "./Notification";
+import Contract from "./Contract"; // ✅ ongeza import
 import "./App.css";
 
-export default function App() {
+function App() {
   const loanTypes = {
     home: { rate: 0.052, max: 500000, term: 36 },
     car: { rate: 0.045, max: 100000, term: 24 },
@@ -25,7 +26,7 @@ export default function App() {
       isAdmin: false,
       applications: [],
       users: {}, // { "Full Name": "password123" }
-      tempApplicant: null
+      tempApplicant: null,
     }
   );
 
@@ -42,7 +43,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setState(prev => ({ ...prev, currentUser: null, isAdmin: false }));
+    setState((prev) => ({ ...prev, currentUser: null, isAdmin: false }));
     setPage("home");
     showNotification("Logged out successfully", "success");
   };
@@ -56,7 +57,7 @@ export default function App() {
       <div className="content-wrapper">
         <div className="main-content">
           {page === "home" && <Home loanTypes={loanTypes} setPage={setPage} />}
-          
+
           {page === "apply" && (
             <ApplyLoan
               state={state}
@@ -64,7 +65,7 @@ export default function App() {
               showNotification={showNotification}
             />
           )}
-          
+
           {page === "login" && (
             <Login
               state={state}
@@ -73,11 +74,11 @@ export default function App() {
               showNotification={showNotification}
             />
           )}
-          
+
           {page === "admin-login" && (
             <AdminLogin
               onAdminLogin={() => {
-                setState(prev => ({ ...prev, isAdmin: true }));
+                setState((prev) => ({ ...prev, isAdmin: true }));
                 setPage("admin-panel");
                 showNotification("Admin logged in successfully", "success");
               }}
@@ -103,6 +104,14 @@ export default function App() {
               showNotification={showNotification}
             />
           )}
+
+          {page === "contract" && (
+            <Contract
+              state={state}
+              setState={setState}
+              showNotification={showNotification}
+            />
+          )}
         </div>
 
         <Sidebar state={state} />
@@ -110,3 +119,5 @@ export default function App() {
     </div>
   );
 }
+
+export default App;

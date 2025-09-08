@@ -19,7 +19,6 @@ const AdminLogin = ({ onAdminLogin }) => {
   return (
     <div className="login-container">
       <h2>Admin Login</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <input
           placeholder="Username"
@@ -36,6 +35,7 @@ const AdminLogin = ({ onAdminLogin }) => {
         />
         <button type="submit">Login</button>
       </form>
+      {error && <p style={{ color: "red" }}>{error}</p>}
     </div>
   );
 };

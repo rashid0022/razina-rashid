@@ -9,6 +9,13 @@ function isValidPhone(phone) {
   return /^\+255\d{9}$/.test(phone);
 }
 
+const loanTypes = {
+  home: { rate: 0.052, max: 500000, term: 36 },
+  car: { rate: 0.045, max: 200000, term: 24 },
+  education: { rate: 0.035, max: 100000, term: 48 },
+  business: { rate: 0.06, max: 300000, term: 30 }
+};
+
 const AdminPanel = ({ state, setState, showNotification }) => {
   const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
@@ -17,10 +24,31 @@ const AdminPanel = ({ state, setState, showNotification }) => {
     setApplications(state.applications.filter(app => app.status === "pending"));
   };
 
+  // ✅ Approve loan with calculations
   const handleApprove = (id) => {
-    const updatedApplications = state.applications.map(app =>
-      app.id === id ? { ...app, status: "approved" } : app
-    );
+    const updatedApplications = state.applications.map(app => {
+      if (app.id === id) {
+        const loanDetails = loanTypes[app.loanType];
+        const approvedAmount = Math.min(app.requestedAmount, loanDetails.max);
+        const interestRate = loanDetails.rate * 100; // in %
+        const monthlyPayment = (
+          (approvedAmount * (1 + loanDetails.rate * (loanDetails.term / 12))) / loanDetails.term
+        ).toFixed(2);
+
+        return {
+          ...app,
+          status: "approved",
+          approvedAmount,
+          interestRate,
+          monthlyPayment,
+          remainingBalance: approvedAmount,
+          amountPaid: 0,
+          term: loanDetails.term
+        };
+      }
+      return app;
+    });
+
     setState({ ...state, applications: updatedApplications });
     fetchApplications();
     setSelectedApp(null);
@@ -59,6 +87,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
               <th>National ID</th>
               <th>Phone Number</th>
               <th>Loan Type</th>
+              <th>Requested Amount</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -84,6 +113,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
                   )}
                 </td>
                 <td>{app.loanType}</td>
+                <td>${app.requestedAmount}</td>
                 <td>{app.status}</td>
                 <td>
                   <div className="admin-actions">
@@ -132,11 +162,19 @@ const AdminPanel = ({ state, setState, showNotification }) => {
           <p>
             <strong>Photo:</strong><br />
             {selectedApp.sponsorPhoto ? (
-              <img
-                src={URL.createObjectURL(selectedApp.sponsorPhoto)}
-                alt="Sponsor"
-                style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
-              />
+              typeof selectedApp.sponsorPhoto === "string" ? (
+                <img
+                  src={selectedApp.sponsorPhoto}
+                  alt="Sponsor"
+                  style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
+                />
+              ) : (
+                <img
+                  src={URL.createObjectURL(selectedApp.sponsorPhoto)}
+                  alt="Sponsor"
+                  style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
+                />
+              )
             ) : (
               "No photo uploaded"
             )}
