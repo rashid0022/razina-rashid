@@ -10,12 +10,11 @@ function isValidPhone(phone) {
 }
 
 const loanTypes = {
-  home: { rate: 0.052, max: 500000, term: 36 },
-  car: { rate: 0.045, max: 200000, term: 24 },
-  education: { rate: 0.035, max: 100000, term: 48 },
-  business: { rate: 0.06, max: 300000, term: 30 }
+  home: { rate: 0.052, max: 50000000, term: 36 },
+  car: { rate: 0.045, max: 20000000, term: 24 },
+  education: { rate: 0.038, max: 1000000, term: 48 },
+  business: { rate: 0.065, max: 100000000, term: 60 }
 };
-
 const AdminPanel = ({ state, setState, showNotification }) => {
   const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
@@ -25,13 +24,17 @@ const AdminPanel = ({ state, setState, showNotification }) => {
   };
 
   // ✅ Approve loan with calculations
+  // AdminPanel.jsx - badilisha formula ya monthlyPayment
   const handleApprove = (id) => {
     const updatedApplications = state.applications.map(app => {
       if (app.id === id) {
         const loanDetails = loanTypes[app.loanType];
         const approvedAmount = Math.min(app.requestedAmount, loanDetails.max);
-        const interestRate = loanDetails.rate * 100; // in %
-        const monthlyPayment = (
+        const interestRate = loanDetails.rate * 100;
+
+        // Formula mpya ya malipo ya kila mwezi
+        const monthlyPayment = Math.max(
+          100000, // chini ya 100,000 haikubaliki
           (approvedAmount * (1 + loanDetails.rate * (loanDetails.term / 12))) / loanDetails.term
         ).toFixed(2);
 
@@ -71,7 +74,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
 
   useEffect(() => {
     fetchApplications();
-  }, []);
+  }, [state.applications]); // <-- FIX: add dependency to update on state change
 
   return (
     <div className="admin-box">
