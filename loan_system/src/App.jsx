@@ -14,10 +14,10 @@ import "./App.css";
 
 function App() {
   const loanTypes = {
-    home: { rate: 0.052, max: 500000, term: 36 },
-    car: { rate: 0.045, max: 100000, term: 24 },
-    education: { rate: 0.038, max: 200000, term: 48 },
-    business: { rate: 0.065, max: 1000000, term: 60 },
+    home: { rate: 0.052, max: 50000000, term: 36 },
+    car: { rate: 0.045, max: 10000000, term: 24 },
+    education: { rate: 0.038, max: 2000000, term: 48 },
+    business: { rate: 0.065, max: 100000000, term: 60 },
   };
 
   const [state, setState] = useState(
