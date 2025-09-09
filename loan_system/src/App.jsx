@@ -9,7 +9,7 @@ import AdminPanel from "./AdminPanel";
 import Dashboard from "./Dashboard";
 import Repayment from "./Repayment";
 import Notification from "./Notification";
-import Contract from "./Contract"; // ✅ ongeza import
+import Contract from "./Contract"; 
 import "./App.css";
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
       currentUser: null,
       isAdmin: false,
       applications: [],
-      users: {}, // { "Full Name": "password123" }
+      users: {}, 
       tempApplicant: null,
     }
   );
