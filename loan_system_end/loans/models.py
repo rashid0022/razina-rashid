@@ -1,15 +1,16 @@
-from django.db import models
-
-# Create your models here.
+# loans/models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
-# Optional: custom user
 class User(AbstractUser):
     is_admin = models.BooleanField(default=False)
     phone = models.CharField(max_length=13, blank=True)
     address = models.CharField(max_length=255, blank=True)
     profile_photo = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    national_id = models.CharField(max_length=20, blank=True)  # new field
+
+    def __str__(self):
+        return self.username
 
 
 class LoanApplication(models.Model):
@@ -39,6 +40,10 @@ class LoanApplication(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     contract_accepted = models.BooleanField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # Extra applicant financial info
+    assets_value = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    monthly_income = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
     # Sponsor info
     sponsor_name = models.CharField(max_length=255, blank=True)

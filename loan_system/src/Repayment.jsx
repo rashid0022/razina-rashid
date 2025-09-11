@@ -4,7 +4,7 @@ const Repayment = ({ state, setState, showNotification }) => {
     const [paymentInfo, setPaymentInfo] = useState({ phone: "", amount: "" });
     const [error, setError] = useState("");
 
-    // Get current user's approved loans
+    
     const loans = state.applications.filter(
         app => app.status === "approved" && app.name === state.currentUser
     );
@@ -19,13 +19,13 @@ const Repayment = ({ state, setState, showNotification }) => {
 
         const { phone, amount } = paymentInfo;
 
-        // Validate phone number
+        
         if (!/^\+255\d{9}$/.test(phone.trim())) {
-            setError("Phone number must be in format +255XXXXXXXXX");
+            setError("Phone number must be in the format +255XXXXXXXXX");
             return;
         }
 
-        // Validate amount
+        
         if (!amount || Number(amount) <= 0) {
             setError("Please enter a valid payment amount");
             return;
@@ -33,15 +33,23 @@ const Repayment = ({ state, setState, showNotification }) => {
 
         const paymentAmount = parseFloat(amount);
 
-        // Apply payment to the first active loan
+        
         const loan = loans[0];
         if (!loan) {
-            setError("You have no approved loans to pay");
+            setError("You have no approved loans to repay");
             return;
         }
 
+        
         if (paymentAmount > loan.remainingBalance) {
-            setError(`Payment cannot exceed remaining balance of $${loan.remainingBalance}`);
+            setError(`Payment cannot exceed the remaining balance of $${loan.remainingBalance.toLocaleString()}`);
+            return;
+        }
+
+        
+        const remainingAfterPayment = loan.remainingBalance - paymentAmount;
+        if (remainingAfterPayment < 0) {
+            setError(`Payment exceeds remaining balance. Please enter an amount not greater than $${loan.remainingBalance.toLocaleString()}`);
             return;
         }
 
@@ -58,7 +66,7 @@ const Repayment = ({ state, setState, showNotification }) => {
                 return {
                     ...l,
                     remainingBalance: newBalance,
-                    amountPaid: l.amountPaid + paymentAmount,
+                    amountPaid: (l.amountPaid || 0) + paymentAmount,
                     payments: [...(l.payments || []), newPayment]
                 };
             }
@@ -68,16 +76,25 @@ const Repayment = ({ state, setState, showNotification }) => {
         setState({ ...state, applications: updatedApplications });
         setPaymentInfo({ phone: "", amount: "" });
         setError("");
-        showNotification(`Payment of $${paymentAmount} processed successfully!`, "success");
+        showNotification(`Payment of $${paymentAmount.toLocaleString()} processed successfully!`, "success");
     };
 
     return (
         <div className="repayment-box">
             <h2>Loan Repayment via Phone</h2>
             {loans.length === 0 ? (
-                <p>You have no approved loans to pay</p>
+                <p>You have no approved loans to repay</p>
             ) : (
-                <p>You have one or more approved loans. Payment will be applied to the first active loan.</p>
+                <>
+                    <p>You have approved loans. Payment will be applied to the first active loan.</p>
+                    <div className="loan-details">
+                        <h3>Loan Details:</h3>
+                        <p><strong>Loan Type:</strong> {loans[0].loanType}</p>
+                        <p><strong>Approved Amount:</strong> ${loans[0].approvedAmount?.toLocaleString()}</p>
+                        <p><strong>Remaining Balance:</strong> ${loans[0].remainingBalance?.toLocaleString()}</p>
+                        <p><strong>Monthly Payment:</strong> ${loans[0].monthlyPayment?.toLocaleString()}</p>
+                    </div>
+                </>
             )}
 
             {error && <p style={{ color: "red" }}>{error}</p>}
@@ -99,6 +116,7 @@ const Repayment = ({ state, setState, showNotification }) => {
                     onChange={handleChange}
                     required
                     min="1"
+                    step="0.01" 
                 />
                 <button type="submit">Pay</button>
             </form>
@@ -107,4 +125,3 @@ const Repayment = ({ state, setState, showNotification }) => {
 };
 
 export default Repayment;
- 

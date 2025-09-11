@@ -15,16 +15,17 @@ const loanTypes = {
   education: { rate: 0.038, max: 1000000, term: 48 },
   business: { rate: 0.065, max: 100000000, term: 60 }
 };
+
 const AdminPanel = ({ state, setState, showNotification }) => {
   const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
 
+  // Fetch pending applications
   const fetchApplications = () => {
     setApplications(state.applications.filter(app => app.status === "pending"));
   };
 
   // ✅ Approve loan with calculations
-  // AdminPanel.jsx - badilisha formula ya monthlyPayment
   const handleApprove = (id) => {
     const updatedApplications = state.applications.map(app => {
       if (app.id === id) {
@@ -32,19 +33,25 @@ const AdminPanel = ({ state, setState, showNotification }) => {
         const approvedAmount = Math.min(app.requestedAmount, loanDetails.max);
         const interestRate = loanDetails.rate * 100;
 
-        // Formula mpya ya malipo ya kila mwezi
+        // Monthly payment (annuity formula)
+        const monthlyRate = loanDetails.rate / 12;
         const monthlyPayment = Math.max(
-          100000, // chini ya 100,000 haikubaliki
-          (approvedAmount * (1 + loanDetails.rate * (loanDetails.term / 12))) / loanDetails.term
+          100000, // minimum 100,000
+          (approvedAmount * monthlyRate * Math.pow(1 + monthlyRate, loanDetails.term)) /
+            (Math.pow(1 + monthlyRate, loanDetails.term) - 1)
         ).toFixed(2);
+
+        // Total payable
+        const totalPayable = monthlyPayment * loanDetails.term;
 
         return {
           ...app,
           status: "approved",
           approvedAmount,
           interestRate,
-          monthlyPayment,
-          remainingBalance: approvedAmount,
+          monthlyPayment: parseFloat(monthlyPayment),
+          remainingBalance: parseFloat(totalPayable),
+          totalPayable: parseFloat(totalPayable),
           amountPaid: 0,
           term: loanDetails.term
         };
@@ -52,18 +59,22 @@ const AdminPanel = ({ state, setState, showNotification }) => {
       return app;
     });
 
+    // Update global state
     setState({ ...state, applications: updatedApplications });
-    fetchApplications();
+    // Refresh pending list immediately
+    setApplications(updatedApplications.filter(app => app.status === "pending"));
     setSelectedApp(null);
     showNotification("Application approved!", "success");
   };
 
+  // ❌ Reject loan
   const handleReject = (id) => {
     const updatedApplications = state.applications.map(app =>
       app.id === id ? { ...app, status: "rejected" } : app
     );
+
     setState({ ...state, applications: updatedApplications });
-    fetchApplications();
+    setApplications(updatedApplications.filter(app => app.status === "pending"));
     setSelectedApp(null);
     showNotification("Application rejected!", "success");
   };
@@ -74,7 +85,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
 
   useEffect(() => {
     fetchApplications();
-  }, [state.applications]); // <-- FIX: add dependency to update on state change
+  }, [state.applications]);
 
   return (
     <div className="admin-box">
@@ -83,9 +94,9 @@ const AdminPanel = ({ state, setState, showNotification }) => {
       {applications.length === 0 && <p>No pending applications</p>}
 
       {applications.length > 0 && (
-        <table border="1" cellPadding="8">
+        <table border="1" cellPadding="8" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr>
+            <tr style={{ backgroundColor: "#f2f2f2" }}>
               <th>Name</th>
               <th>National ID</th>
               <th>Phone Number</th>
@@ -116,7 +127,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
                   )}
                 </td>
                 <td>{app.loanType}</td>
-                <td>${app.requestedAmount}</td>
+                <td>${app.requestedAmount?.toLocaleString() || "0"}</td>
                 <td>{app.status}</td>
                 <td>
                   <div className="admin-actions">

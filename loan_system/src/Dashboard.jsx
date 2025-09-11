@@ -4,9 +4,12 @@ const Dashboard = ({ state, setState, setPage }) => {
   const [userLoans, setUserLoans] = useState([]);
 
   useEffect(() => {
-    // Filter loans for the current user
+    // Filter loans only for the current user
     const userApplications = state.applications.filter(
-      (app) => app.name === state.currentUser
+      (app) =>
+        app.name === state.currentUser &&
+        app.approvedAmount && // only show if approvedAmount exists
+        app.status === "approved" // only show approved
     );
     setUserLoans(userApplications);
   }, [state.applications, state.currentUser]);
@@ -19,24 +22,28 @@ const Dashboard = ({ state, setState, setPage }) => {
       ) : (
         userLoans.map((loan) => (
           <div key={loan.id} className="dashboard-card">
-            <h3>{loan.loanType} Loan</h3>
+            <h3>
+              {loan.loanType
+                ? loan.loanType.charAt(0).toUpperCase() + loan.loanType.slice(1)
+                : "Loan"}
+            </h3>
             <p>
-              <strong>Requested Amount:</strong> ${loan.requestedAmount}
+              <strong>Requested Amount:</strong> ${loan.requestedAmount?.toLocaleString()}
             </p>
             <p>
-              <strong>Approved Amount:</strong> ${loan.approvedAmount}
+              <strong>Approved Amount:</strong> ${loan.approvedAmount?.toLocaleString()}
             </p>
             <p>
               <strong>Status:</strong> {loan.status}
             </p>
             <p>
-              <strong>Interest Rate:</strong> {loan.interestRate}
+              <strong>Interest Rate:</strong> {loan.interestRate}%
             </p>
             <p>
-              <strong>Monthly Payment:</strong> ${loan.monthlyPayment}
+              <strong>Monthly Payment:</strong> ${loan.monthlyPayment?.toLocaleString()}
             </p>
             <p>
-              <strong>Remaining Balance:</strong> ${loan.remainingBalance}
+              <strong>Remaining Balance:</strong> ${loan.remainingBalance?.toLocaleString()}
             </p>
 
             {loan.status === "approved" && (
