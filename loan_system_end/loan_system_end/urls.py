@@ -17,11 +17,11 @@ Including another URLconf
 # loan_system_end/urls.py
 from django.contrib import admin
 from django.urls import path, include
+from django.views.decorators.csrf import ensure_csrf_cookie
 from loans.views import home  # home view ya test tu
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', home, name='home'),           # http://127.0.0.1:8000/
-    path('api/', include('loans.urls')),   # routes zote za loans app
+    path('', ensure_csrf_cookie(home), name='home'),  # Hii inatoa CSRF cookie kwenye home
+    path('api/', include('loans.urls')),             # routes zote za loans app
 ]
-

@@ -50,67 +50,74 @@ function App() {
     showNotification("Logged out successfully", "success");
   };
 
-// ----------------------
-// Fetch loan applications
-// ----------------------
-useEffect(() => {
-  const fetchLoans = async () => {
-    try {
-      const res = await api.get("loans/");
-      setState((prev) => ({ ...prev, applications: res.data }));
-    } catch (err) {
-      if (err.response) {
-        // Server responded with an error
-        console.error("Error fetching loans:", err.response.data);
-        showNotification(
-          `Error fetching loans: ${JSON.stringify(err.response.data)}`,
-          "error"
-        );
-      } else if (err.request) {
-        console.error("No response received:", err.request);
-        showNotification("No response from server while fetching loans", "error");
-      } else {
-        console.error("Error:", err.message);
-        showNotification(`Error: ${err.message}`, "error");
+  // ----------------------
+  // Fetch loan applications
+  // ----------------------
+  useEffect(() => {
+    const fetchLoans = async () => {
+      try {
+        console.log("Fetching loans from API...");
+        const res = await api.get("loans/");
+        console.log("Loans fetched successfully:", res.data);
+        setState((prev) => ({ ...prev, applications: res.data }));
+      } catch (err) {
+        console.error("Error in fetchLoans:", err);
+        
+        if (err.response) {
+          // Server responded with an error
+          console.error("Error response:", err.response.data);
+          showNotification(
+            `Error fetching loans: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
+            "error"
+          );
+        } else if (err.request) {
+          console.error("No response received:", err.request);
+          showNotification("No response from server while fetching loans. Is Django running?", "error");
+        } else {
+          console.error("Error:", err.message);
+          showNotification(`Error: ${err.message}`, "error");
+        }
       }
-    }
-  };
-  fetchLoans();
-}, []);
+    };
+    
+    fetchLoans();
+  }, []);
 
-// ----------------------
-// Fetch users if admin
-// ----------------------
-useEffect(() => {
-  if (!state.isAdmin) return;
+  // ----------------------
+  // Fetch users if admin
+  // ----------------------
+  useEffect(() => {
+    if (!state.isAdmin) return;
 
-  const fetchUsers = async () => {
-    try {
-      const res = await api.get("users/");
-      const usersObj = {};
-      res.data.forEach((user) => {
-        usersObj[user.id] = user;
-      });
-      setState((prev) => ({ ...prev, users: usersObj }));
-    } catch (err) {
-      if (err.response) {
-        console.error("Error fetching users:", err.response.data);
-        showNotification(
-          `Error fetching users: ${JSON.stringify(err.response.data)}`,
-          "error"
-        );
-      } else if (err.request) {
-        console.error("No response received:", err.request);
-        showNotification("No response from server while fetching users", "error");
-      } else {
-        console.error("Error:", err.message);
-        showNotification(`Error: ${err.message}`, "error");
+    const fetchUsers = async () => {
+      try {
+        const res = await api.get("users/");
+        const usersObj = {};
+        res.data.forEach((user) => {
+          usersObj[user.id] = user;
+        });
+        setState((prev) => ({ ...prev, users: usersObj }));
+      } catch (err) {
+        console.error("Error in fetchUsers:", err);
+        
+        if (err.response) {
+          console.error("Error fetching users:", err.response.data);
+          showNotification(
+            `Error fetching users: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
+            "error"
+          );
+        } else if (err.request) {
+          console.error("No response received:", err.request);
+          showNotification("No response from server while fetching users", "error");
+        } else {
+          console.error("Error:", err.message);
+          showNotification(`Error: ${err.message}`, "error");
+        }
       }
-    }
-  };
+    };
 
-  fetchUsers();
-}, [state.isAdmin]);
+    fetchUsers();
+  }, [state.isAdmin]);
 
   return (
     <div className="app-container">

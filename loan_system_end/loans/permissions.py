@@ -1,4 +1,3 @@
-# loans/permissions.py
 from rest_framework import permissions
 
 class IsOwnerOrAdmin(permissions.BasePermission):
@@ -7,15 +6,15 @@ class IsOwnerOrAdmin(permissions.BasePermission):
     """
 
     def has_object_permission(self, request, view, obj):
-        # Admin users can do anything
-        if request.user.is_staff:
+        # Admin users or custom is_admin can do anything
+        if request.user.is_staff or getattr(request.user, 'is_admin', False):
             return True
 
-        # Check if object has 'applicant' attribute (LoanApplication or User)
+        # Check kama ni owner wa LoanApplication
         if hasattr(obj, 'applicant'):
             return obj.applicant == request.user
 
-        # Check if object has 'loan' attribute (Payment)
+        # Check kama ni owner wa Payment
         if hasattr(obj, 'loan'):
             return obj.loan.applicant == request.user
 
