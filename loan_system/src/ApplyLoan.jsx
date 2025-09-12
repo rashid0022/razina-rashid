@@ -64,27 +64,34 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
     if (!sponsorPreview) return showNotification("Upload sponsor photo", "error");
 
     try {
+      const [first_name, ...last_nameArr] = state.tempApplicant.name.trim().split(" ");
+      const last_name = last_nameArr.join(" ") || first_name;
+
       const applicationData = {
-        ...state.tempApplicant,
+        username: state.tempApplicant.username,
+        password: state.tempApplicant.password,
+        first_name,
+        last_name,
+        email: state.tempApplicant.email,
+        phone: state.tempApplicant.phone,
+        address: state.tempApplicant.address,
+        national_id: state.tempApplicant.national_id,
+        profile_photo: preview,
+
+        loan_type: state.tempApplicant.loan_type,
+        requested_amount: state.tempApplicant.requested_amount,
+        assets_value: state.tempApplicant.assets_value,
+        monthly_income: state.tempApplicant.monthly_income,
+
         sponsor_name: data.sponsor_name,
         sponsor_address: data.sponsor_address,
         sponsor_national_id: data.sponsor_national_id,
         sponsor_phone: data.sponsor_phone,
         sponsor_email: data.sponsor_email,
-        sponsor_photo: sponsorPreview,
-        user_data: {
-          username: state.tempApplicant.username,
-          password: state.tempApplicant.password,
-          first_name: state.tempApplicant.name.split(" ")[0],
-          last_name: state.tempApplicant.name.split(" ").slice(1).join(" "),
-          email: state.tempApplicant.email,
-          phone: state.tempApplicant.phone,
-          address: state.tempApplicant.address,
-          national_id: state.tempApplicant.national_id,
-        },
+        sponsor_photo: sponsorPreview
       };
 
-      const response = await api.post("loans/", applicationData);
+      const response = await api.post("register-apply/", applicationData);
 
       if (response.status === 201) {
         showNotification("Application submitted successfully!", "success");
