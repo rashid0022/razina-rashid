@@ -7,7 +7,6 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Convert uploaded file to Base64
   const fileToBase64 = (file, callback) => {
     const reader = new FileReader();
     reader.onloadend = () => callback(reader.result);
@@ -40,7 +39,6 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
     const form = new FormData(e.target);
     const data = Object.fromEntries(form.entries());
 
-    // Basic validation
     if (!/^\d{20}$/.test(data.national_id)) return showNotification("Invalid National ID", "error");
     if (!/^\+255\d{9}$/.test(data.phone)) return showNotification("Invalid phone", "error");
     if (data.password !== data.confirm_password) return showNotification("Passwords do not match", "error");
@@ -60,37 +58,20 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
     const form = new FormData(e.target);
     const data = Object.fromEntries(form.entries());
 
-    // Sponsor validation
-    if (!/^\d{20}$/.test(data.sponsor_national_id)) {
-      setIsSubmitting(false);
-      return showNotification("Invalid sponsor ID", "error");
-    }
-    if (!/^\+255\d{9}$/.test(data.sponsor_phone)) {
-      setIsSubmitting(false);
-      return showNotification("Invalid sponsor phone", "error");
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.sponsor_email)) {
-      setIsSubmitting(false);
-      return showNotification("Invalid sponsor email", "error");
-    }
-    if (!sponsorPreview) {
-      setIsSubmitting(false);
-      return showNotification("Upload sponsor photo", "error");
-    }
+    if (!/^\d{20}$/.test(data.sponsor_national_id)) return showNotification("Invalid sponsor ID", "error");
+    if (!/^\+255\d{9}$/.test(data.sponsor_phone)) return showNotification("Invalid sponsor phone", "error");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.sponsor_email)) return showNotification("Invalid sponsor email", "error");
+    if (!sponsorPreview) return showNotification("Upload sponsor photo", "error");
 
     try {
       const applicationData = {
-        loan_type: state.tempApplicant.loan_type,
-        requested_amount: parseFloat(state.tempApplicant.requested_amount),
-        assets_value: parseFloat(state.tempApplicant.assets_value),
-        monthly_income: parseFloat(state.tempApplicant.monthly_income),
+        ...state.tempApplicant,
         sponsor_name: data.sponsor_name,
         sponsor_address: data.sponsor_address,
         sponsor_national_id: data.sponsor_national_id,
         sponsor_phone: data.sponsor_phone,
         sponsor_email: data.sponsor_email,
         sponsor_photo: sponsorPreview,
-        profile_photo: preview,
         user_data: {
           username: state.tempApplicant.username,
           password: state.tempApplicant.password,
@@ -107,35 +88,20 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
 
       if (response.status === 201) {
         showNotification("Application submitted successfully!", "success");
-        
-        // If new user was created and auto-logged in
-        if (response.data.user) {
-          setState(prev => ({
-            ...prev,
-            currentUser: response.data.user.username,
-            applications: [...prev.applications, response.data.loan_application]
-          }));
-        }
-        
+        setState(prev => ({
+          ...prev,
+          currentUser: response.data.user?.username || prev.currentUser,
+          applications: [...(prev.applications || []), response.data.loan_application]
+        }));
         e.target.reset();
         setPreview(null);
         setSponsorPreview(null);
         setStep(1);
-        setPage("dashboard"); // Redirect to dashboard after successful submission
+        setPage("dashboard");
       }
     } catch (err) {
       console.error("Submission error:", err);
-      if (err.response) {
-        let errorMessage = "Error submitting application";
-        if (err.response.data && typeof err.response.data === 'object') {
-          errorMessage = Object.values(err.response.data).flat().join(', ');
-        } else if (err.response.data) {
-          errorMessage = err.response.data;
-        }
-        showNotification(`Error: ${errorMessage}`, "error");
-      } else {
-        showNotification("Error submitting application. Please check your connection.", "error");
-      }
+      showNotification("Error submitting application. Please check your connection.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -144,7 +110,6 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
   return (
     <div className="applicant-form">
       <h2>Loan Application Form</h2>
-
       {step === 1 && (
         <form onSubmit={handleApplicantSave}>
           <input name="username" placeholder="Username" required />

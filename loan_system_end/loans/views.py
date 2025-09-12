@@ -1,3 +1,4 @@
+# loans/views.py
 from django.shortcuts import redirect
 from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import api_view, permission_classes
@@ -6,7 +7,13 @@ from django.contrib.auth import authenticate, login
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import User, LoanApplication, Payment
-from .serializers import UserSerializer, UserCreateSerializer, LoanApplicationSerializer, PaymentSerializer
+from .serializers import (
+    UserSerializer,
+    UserCreateSerializer,
+    LoanApplicationSerializer,
+    PaymentSerializer,
+    RegisterAndApplySerializer,
+)
 from .permissions import IsOwnerOrAdmin
 
 # ===== Home view redirects to React frontend =====
@@ -61,6 +68,32 @@ def user_register(request):
             }
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# ===== Register + Apply Loan View =====
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def register_and_apply(request):
+    """
+    User first applies for loan, this also creates the user account.
+    Returns the new user and the loan application.
+    """
+    serializer = RegisterAndApplySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    result = serializer.save()  # creates both User and LoanApplication
+
+    # Auto-login the user
+    user = authenticate(
+        request,
+        username=request.data.get('username'),
+        password=request.data.get('password')
+    )
+    if user:
+        login(request, user)
+
+    return Response({
+        "user": {"username": result['user'].username},
+        "loan_application": {"id": result['loan_application'].id}
+    }, status=201)
 
 # ===== DRF ViewSets =====
 class UserViewSet(viewsets.ModelViewSet):

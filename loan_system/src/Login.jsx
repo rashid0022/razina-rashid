@@ -1,6 +1,5 @@
-// Login.jsx - Simplified version
 import React, { useState } from "react";
-import api from "./api"; // Use the centralized api instance
+import api from "./api";
 
 const Login = ({ state, setState, setPage, showNotification }) => {
   const [username, setUsername] = useState("");
@@ -9,7 +8,6 @@ const Login = ({ state, setState, setPage, showNotification }) => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
       const response = await api.post("login/", { username, password });
 
@@ -51,7 +49,7 @@ const Login = ({ state, setState, setPage, showNotification }) => {
       </form>
       <p style={{ marginTop: "15px" }}>
         Don't have an account?{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); setPage("apply"); }} style={{ color: "#3498db" }}>
+        <a href="#" onClick={(e) => { e.preventDefault(); setPage("apply"); }}>
           Apply for a loan to create one
         </a>
       </p>

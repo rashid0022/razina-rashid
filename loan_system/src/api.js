@@ -1,20 +1,19 @@
-// api.js
 import axios from "axios";
 
-// API instance
+// Axios instance
 const api = axios.create({
   baseURL: "http://127.0.0.1:8000/api/",
   headers: { "Content-Type": "application/json" },
-  withCredentials: true,
+  withCredentials: true, // very important for CSRF + session
 });
 
-// Pata CSRF cookie
+// Helper: get cookie by name
 function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== "") {
     const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
+    for (let cookie of cookies) {
+      cookie = cookie.trim();
       if (cookie.startsWith(name + "=")) {
         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
         break;
@@ -24,19 +23,16 @@ function getCookie(name) {
   return cookieValue;
 }
 
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    const csrfToken = getCookie("csrftoken");
-    if (csrfToken && ["post", "put", "delete", "patch"].includes(config.method)) {
-      config.headers["X-CSRFToken"] = csrfToken;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+// Add CSRF token automatically for unsafe methods
+api.interceptors.request.use((config) => {
+  const csrfToken = getCookie("csrftoken");
+  if (csrfToken && ["post", "put", "delete", "patch"].includes(config.method)) {
+    config.headers["X-CSRFToken"] = csrfToken;
+  }
+  return config;
+}, (error) => Promise.reject(error));
 
-// Response interceptor
+// Response interceptor: redirect to login on 401/403
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -48,9 +44,7 @@ api.interceptors.response.use(
   }
 );
 
-// ✅ Pata CSRF token kutoka backend na chapisha
-api.get("/csrf/")
-   .then(res => console.log("CSRF token:", res.data.csrfToken))
-   .catch(err => console.error("CSRF fetch error:", err));
+// Optional: fetch CSRF token from backend once at app start
+api.get("/csrf/").catch(err => console.error("CSRF fetch error:", err));
 
 export default api;
