@@ -1,36 +1,55 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import api from "./api";
 
 const AdminLogin = ({ onAdminLogin }) => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  // Default username na password
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  // Pata CSRF token wakati component inarender
+  useEffect(() => {
+    api.get("/csrf/")
+      .then(res => console.log("CSRF token:", res.data.csrfToken))
+      .catch(console.error);
+  }, []);
+
+  // Handle submit – version mpya ya debugging
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Trim username to avoid accidental spaces
-    if (username.trim() === "admin" && password === "admin123") {
-      setError("");
-      onAdminLogin();
-    } else {
-      setError("Wrong admin credentials");
+    setError("");
+    try {
+      // Request kwa backend
+      const res = await api.post("/login/", { username, password });
+      console.log("Login response:", res.data); // debugging
+
+      const user = res.data.user;
+      if (user && (user.is_superuser || user.is_staff)) {
+        onAdminLogin(user); // trigger parent callback
+      } else {
+        setError("Huna ruhusa ya admin");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Username au password si sahihi");
     }
   };
 
   return (
-    <div className="login-container">
+    <div>
       <h2>Admin Login</h2>
       <form onSubmit={handleSubmit}>
         <input
           placeholder="Username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
           required
         />
         <input
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           required
         />
         <button type="submit">Login</button>

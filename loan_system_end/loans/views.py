@@ -1,26 +1,37 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import api_view
+from django.shortcuts import redirect
+from rest_framework import viewsets, permissions, status, serializers
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
 from .models import User, LoanApplication, Payment
 from .serializers import UserSerializer, UserCreateSerializer, LoanApplicationSerializer, PaymentSerializer
 from .permissions import IsOwnerOrAdmin
 
-# ===== Simple home view =====
+# ===== Home view redirects to React frontend =====
+@ensure_csrf_cookie
 def home(request):
-    return HttpResponse("Welcome to Loan System Home")
+    return redirect("http://localhost:5173")  # React dev server
+
+# ===== CSRF Token View =====
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_csrf_token(request):
+    return Response({'csrfToken': get_token(request)})
 
 # ===== Login View =====
 @api_view(['POST'])
+@permission_classes([permissions.AllowAny])
 def user_login(request):
     username = request.data.get('username')
     password = request.data.get('password')
-    
+
+    if not username or not password:
+        return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
     user = authenticate(request, username=username, password=password)
-    if user is not None:
+    if user:
         login(request, user)
         return Response({
             'message': 'Login successful',
@@ -28,11 +39,28 @@ def user_login(request):
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'is_admin': getattr(user, 'is_admin', False)
+                'is_superuser': user.is_superuser,
+                'is_staff': user.is_staff,
             }
         })
-    else:
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+# ===== User Registration =====
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def user_register(request):
+    serializer = UserCreateSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        return Response({
+            'message': 'User created successfully',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        }, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # ===== DRF ViewSets =====
 class UserViewSet(viewsets.ModelViewSet):
@@ -46,47 +74,31 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
 
     def get_queryset(self):
-        if self.request.user.is_staff or getattr(self.request.user, 'is_admin', False):
-            return LoanApplication.objects.all()
-        return LoanApplication.objects.filter(applicant=self.request.user)
+        user = self.request.user
+        if user.is_authenticated:
+            if user.is_staff or user.is_superuser:
+                return LoanApplication.objects.all()
+            return LoanApplication.objects.filter(applicant=user)
+        return LoanApplication.objects.none()
 
-    def create(self, request, *args, **kwargs):
-        user_data = request.data.pop('user_data', None)
-        
-        if not user_data:
-            return Response(
-                {"error": "User data is required"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            # Create user
-            user_serializer = UserCreateSerializer(data=user_data)
-            if user_serializer.is_valid():
-                user = user_serializer.save()
-
-                # Prepare loan data (remove any extra fields)
-                loan_data = {k: v for k, v in request.data.items() if k not in ['user_data']}
-
-                # Pass applicant explicitly
-                loan_serializer = self.get_serializer(data=loan_data)
-                if loan_serializer.is_valid():
-                    loan_application = loan_serializer.save(applicant=user)
-                    return Response(loan_serializer.data, status=status.HTTP_201_CREATED)
-                else:
-                    user.delete()
-                    return Response(loan_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def perform_create(self, serializer):
+        serializer.save(applicant=self.request.user)
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
 
     def get_queryset(self):
-        if self.request.user.is_staff or getattr(self.request.user, 'is_admin', False):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
             return Payment.objects.all()
-        return Payment.objects.filter(loan__applicant=self.request.user)
+        return Payment.objects.filter(loan__applicant=user)
+
+    def perform_create(self, serializer):
+        loan_id = self.request.data.get('loan')
+        try:
+            loan = LoanApplication.objects.get(id=loan_id, applicant=self.request.user)
+            serializer.save(loan=loan)
+        except LoanApplication.DoesNotExist:
+            raise serializers.ValidationError("Loan not found or you don't have permission")

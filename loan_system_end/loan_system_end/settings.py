@@ -9,6 +9,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -97,32 +98,30 @@ REST_FRAMEWORK = {
     ],
 }
 
+# --- Development Settings for Cookies (React + Django) ---
 
-# CORS SETTINGS - REKEBISHA HIZI
-CORS_ALLOW_ALL_ORIGINS = True  # Kwa development tu! Weka False kwa production
+# CSRF cookie settings
+CSRF_COOKIE_SAMESITE = None      # Lazima None kwa cross-site development
+CSRF_COOKIE_SECURE = False       # False kwa local dev (no HTTPS)
 
-# AU weka hizi kama unataka kuwasha origins maalum
+# Session cookie settings
+SESSION_COOKIE_SAMESITE = None   # Lazima None kwa cross-site
+SESSION_COOKIE_SECURE = False    # False kwa local dev
+
+SESSION_COOKIE_HTTPONLY = True   # Salama, prevent JS access
+
+# CORS settings (React frontend on localhost:5173)
+CORS_ALLOW_ALL_ORIGINS = True     # Development only
+CORS_ALLOW_CREDENTIALS = True     # Required for cookies
+
+# Optional: if you want specific origins
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://localhost:8000",
-
+    "http://127.0.0.1:5173",
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-
-# CSRF SETTINGS - MUHIMU SANA
+# CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
 ]
-
-# SESSION SETTINGS
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = False  # Weka True kwa production
-SESSION_COOKIE_HTTPONLY = True
-
-# CSRF COOKIE SETTINGS
-CSRF_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SECURE = False  # Weka True kwa production

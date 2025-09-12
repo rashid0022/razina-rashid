@@ -18,10 +18,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.decorators.csrf import ensure_csrf_cookie
-from loans.views import home  # home view ya test tu
+from loans.views import home, get_csrf_token, user_login  # ← user_login imeongeza hapa
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', ensure_csrf_cookie(home), name='home'),  # Hii inatoa CSRF cookie kwenye home
-    path('api/', include('loans.urls')),             # routes zote za loans app
+    path('', ensure_csrf_cookie(home), name='home'),
+    path('csrf/', get_csrf_token, name='csrf'),          # CSRF endpoint
+    path('api/login/', user_login, name='api-login'),    # Login endpoint
+    path('api/', include('loans.urls')),                # DRF ViewSets
 ]

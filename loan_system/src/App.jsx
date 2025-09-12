@@ -137,6 +137,7 @@ function App() {
             <ApplyLoan
               state={state}
               setState={setState}
+              setPage={setPage}
               showNotification={showNotification}
               api={api}
             />

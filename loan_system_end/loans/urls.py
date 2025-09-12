@@ -1,13 +1,13 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import UserViewSet, LoanApplicationViewSet, PaymentViewSet, user_login
+from rest_framework import routers
+from . import views
 
-router = DefaultRouter()
-router.register(r'users', UserViewSet)
-router.register(r'loans', LoanApplicationViewSet, basename='loan')
-router.register(r'payments', PaymentViewSet, basename='payment')
+router = routers.DefaultRouter()
+router.register(r'users', views.UserViewSet)
+router.register(r'loans', views.LoanApplicationViewSet)
+router.register(r'payments', views.PaymentViewSet)
 
 urlpatterns = [
-    path('auth/login/', user_login, name='user_login'),  # Login endpoint
-    path('', include(router.urls)),                     # API endpoints za users, loans, payments
+    path('csrf/', views.get_csrf_token),  # optional ndani ya /api/csrf/
+    path('', include(router.urls)),
 ]

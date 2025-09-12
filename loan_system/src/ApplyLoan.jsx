@@ -1,10 +1,11 @@
 import { useState } from "react";
 import api from "./api";
 
-export default function ApplyLoan({ state, setState, showNotification }) {
+export default function ApplyLoan({ state, setState, showNotification, setPage }) {
   const [preview, setPreview] = useState(null);
   const [sponsorPreview, setSponsorPreview] = useState(null);
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Convert uploaded file to Base64
   const fileToBase64 = (file, callback) => {
@@ -54,19 +55,28 @@ export default function ApplyLoan({ state, setState, showNotification }) {
 
   const handleSponsorSubmit = async (e) => {
     e.preventDefault();
-
-    if (!state.currentUser) {
-      return showNotification("You must login first", "error");
-    }
+    setIsSubmitting(true);
 
     const form = new FormData(e.target);
     const data = Object.fromEntries(form.entries());
 
     // Sponsor validation
-    if (!/^\d{20}$/.test(data.sponsor_national_id)) return showNotification("Invalid sponsor ID", "error");
-    if (!/^\+255\d{9}$/.test(data.sponsor_phone)) return showNotification("Invalid sponsor phone", "error");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.sponsor_email)) return showNotification("Invalid sponsor email", "error");
-    if (!sponsorPreview) return showNotification("Upload sponsor photo", "error");
+    if (!/^\d{20}$/.test(data.sponsor_national_id)) {
+      setIsSubmitting(false);
+      return showNotification("Invalid sponsor ID", "error");
+    }
+    if (!/^\+255\d{9}$/.test(data.sponsor_phone)) {
+      setIsSubmitting(false);
+      return showNotification("Invalid sponsor phone", "error");
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.sponsor_email)) {
+      setIsSubmitting(false);
+      return showNotification("Invalid sponsor email", "error");
+    }
+    if (!sponsorPreview) {
+      setIsSubmitting(false);
+      return showNotification("Upload sponsor photo", "error");
+    }
 
     try {
       const applicationData = {
@@ -97,21 +107,37 @@ export default function ApplyLoan({ state, setState, showNotification }) {
 
       if (response.status === 201) {
         showNotification("Application submitted successfully!", "success");
+        
+        // If new user was created and auto-logged in
+        if (response.data.user) {
+          setState(prev => ({
+            ...prev,
+            currentUser: response.data.user.username,
+            applications: [...prev.applications, response.data.loan_application]
+          }));
+        }
+        
         e.target.reset();
         setPreview(null);
         setSponsorPreview(null);
         setStep(1);
+        setPage("dashboard"); // Redirect to dashboard after successful submission
       }
     } catch (err) {
       console.error("Submission error:", err);
       if (err.response) {
-        showNotification(
-          `Error: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
-          "error"
-        );
+        let errorMessage = "Error submitting application";
+        if (err.response.data && typeof err.response.data === 'object') {
+          errorMessage = Object.values(err.response.data).flat().join(', ');
+        } else if (err.response.data) {
+          errorMessage = err.response.data;
+        }
+        showNotification(`Error: ${errorMessage}`, "error");
       } else {
-        showNotification("Error submitting application", "error");
+        showNotification("Error submitting application. Please check your connection.", "error");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -126,7 +152,7 @@ export default function ApplyLoan({ state, setState, showNotification }) {
           <input name="address" placeholder="Postal Address" required />
           <input name="national_id" placeholder="National ID" required maxLength="20" />
           <input name="phone" placeholder="Phone (+255XXXXXXXXX)" required maxLength="13" />
-          <input name="email" placeholder="Email" />
+          <input name="email" placeholder="Email" type="email" />
           <select name="loan_type" required>
             <option value="">Select Loan Type</option>
             <option value="home">Home</option>
@@ -152,11 +178,13 @@ export default function ApplyLoan({ state, setState, showNotification }) {
           <input name="sponsor_address" placeholder="Sponsor Address" required />
           <input name="sponsor_national_id" placeholder="Sponsor ID" required maxLength="20" />
           <input name="sponsor_phone" placeholder="Sponsor Phone (+255XXXXXXXXX)" required maxLength="13" />
-          <input name="sponsor_email" placeholder="Sponsor Email" required />
+          <input name="sponsor_email" placeholder="Sponsor Email" type="email" required />
           <label>Upload Sponsor Photo:</label>
           <input type="file" name="sponsor_photo" accept="image/*" onChange={handleFileChange} required />
           {sponsorPreview && <img src={sponsorPreview} alt="Sponsor Preview" style={{ width: "100px", marginTop: "10px" }} />}
-          <button type="submit">Submit Application</button>
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Submitting..." : "Submit Application"}
+          </button>
         </form>
       )}
     </div>

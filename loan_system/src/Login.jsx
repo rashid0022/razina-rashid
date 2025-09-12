@@ -1,42 +1,11 @@
+// Login.jsx - Simplified version
 import React, { useState } from "react";
-import axios from "axios";
+import api from "./api"; // Use the centralized api instance
 
 const Login = ({ state, setState, setPage, showNotification }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
-  // ✅ Axios instance yenye withCredentials
-  const api = axios.create({
-    baseURL: "http://127.0.0.1:8000/api/",
-    headers: { "Content-Type": "application/json" },
-    withCredentials: true, // hii inahakikisha cookies/session zinatumika
-  });
-
-  // CSRF token interceptor
-  api.interceptors.request.use(
-    (config) => {
-      const csrfToken = getCookie("csrftoken");
-      if (csrfToken) config.headers["X-CSRFToken"] = csrfToken;
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
-
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== "") {
-      const cookies = document.cookie.split(";");
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.startsWith(name + "=")) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -52,7 +21,11 @@ const Login = ({ state, setState, setPage, showNotification }) => {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Invalid credentials");
+      if (err.response?.status === 400 || err.response?.status === 401) {
+        setError("Invalid username or password");
+      } else {
+        setError("Login failed. Please try again.");
+      }
     }
   };
 
@@ -76,6 +49,12 @@ const Login = ({ state, setState, setPage, showNotification }) => {
         />
         <button type="submit">Login</button>
       </form>
+      <p style={{ marginTop: "15px" }}>
+        Don't have an account?{" "}
+        <a href="#" onClick={(e) => { e.preventDefault(); setPage("apply"); }} style={{ color: "#3498db" }}>
+          Apply for a loan to create one
+        </a>
+      </p>
     </div>
   );
 };
