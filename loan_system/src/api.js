@@ -1,13 +1,21 @@
 import axios from "axios";
 
-// Axios instance
+// 1️⃣ Unda Axios instance
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true, // very important for CSRF + session
+  baseURL: "http://localhost:8000/api",
+  withCredentials: true, // muhimu kwa CSRF
 });
 
-// Helper: get cookie by name
+// 2️⃣ Optional: fetch CSRF token once at app start
+axios.get("http://localhost:8000/csrf/", {
+  withCredentials: true
+})
+.then(response => {
+  console.log("CSRF token fetched successfully:", response.data.csrfToken);
+})
+.catch(err => console.error("CSRF fetch error:", err));
+
+// 3️⃣ Helper: get cookie by name
 function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== "") {
@@ -23,16 +31,17 @@ function getCookie(name) {
   return cookieValue;
 }
 
-// Add CSRF token automatically for unsafe methods
+// 4️⃣ Add CSRF token automatically for unsafe methods
 api.interceptors.request.use((config) => {
   const csrfToken = getCookie("csrftoken");
-  if (csrfToken && ["post", "put", "delete", "patch"].includes(config.method)) {
+  
+  if (csrfToken && ["post", "put", "delete", "patch"].includes(config.method?.toLowerCase())) {
     config.headers["X-CSRFToken"] = csrfToken;
   }
   return config;
 }, (error) => Promise.reject(error));
 
-// Response interceptor: redirect to login on 401/403
+// 5️⃣ Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -44,7 +53,5 @@ api.interceptors.response.use(
   }
 );
 
-// Optional: fetch CSRF token from backend once at app start
-api.get("/csrf/").catch(err => console.error("CSRF fetch error:", err));
-
+// 6️⃣ Export instance
 export default api;

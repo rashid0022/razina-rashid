@@ -1,31 +1,28 @@
 import React, { useEffect, useState } from "react";
-import api from "./api";
+import api from "./api"; // ← tumia api instance
 
 const AdminLogin = ({ onAdminLogin }) => {
-  // Default username na password
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
 
   // Pata CSRF token wakati component inarender
   useEffect(() => {
-    api.get("/csrf/")
+    api.get("/csrf/") // ← tumia api instance badala ya axios
       .then(res => console.log("CSRF token:", res.data.csrfToken))
       .catch(console.error);
   }, []);
 
-  // Handle submit – version mpya ya debugging
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     try {
-      // Request kwa backend
       const res = await api.post("/login/", { username, password });
-      console.log("Login response:", res.data); // debugging
+      console.log("Login response:", res.data);
 
       const user = res.data.user;
       if (user && (user.is_superuser || user.is_staff)) {
-        onAdminLogin(user); // trigger parent callback
+        onAdminLogin(user);
       } else {
         setError("Huna ruhusa ya admin");
       }

@@ -7,6 +7,7 @@ SECRET_KEY = 'django-insecure-your-secret-key-here'
 DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+# settings.py - HAKIKISHA HII IKO
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -14,13 +15,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',  # ← MUST be here
     'rest_framework',
-    'corsheaders',
     'loans',
 ]
-
+# settings.py - HAKIKISHA HII IKO SAHIHI
+# settings.py - ADD MIDDLEWARE
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # MUST be at the top
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -28,8 +30,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # ✅ ADD CUSTOM CORS MIDDLEWARE (LAST)
+    'loan_system_end.middleware.CorsMiddleware',
 ]
-
 ROOT_URLCONF = 'loan_system_end.urls'
 
 TEMPLATES = [
@@ -87,17 +90,32 @@ REST_FRAMEWORK = {
     ],
 }
 
-# --- CSRF & Session for React Frontend ---
-CSRF_COOKIE_SAMESITE = None
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_SECURE = False
+# settings.py - UPDATE HII SEHEMU KABISA
+
+# --- CORS Settings ---
+# settings.py - UPDATE HII SEHEMU
+
+# --- CSRF & Session Settings ---
+CSRF_COOKIE_SAMESITE = 'None'  # ← Badilisha 'Lax' kuwa 'None'
+CSRF_COOKIE_SECURE = True      # ← Badilisha False kuwa True (for SameSite=None)
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_NAME = 'csrftoken'
+
+SESSION_COOKIE_SAMESITE = 'None'  # ← Badilisha 'Lax' kuwa 'None'
+SESSION_COOKIE_SECURE = True      # ← Badilisha False kuwa True
 SESSION_COOKIE_HTTPONLY = True
 
-# --- CORS (React frontend on localhost:5173) ---
-CORS_ALLOW_ALL_ORIGINS = True  # Development only
-CORS_ALLOW_CREDENTIALS = True
+# --- CORS Settings ---
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+CORS_ALLOW_ALL_CREDENTIALS = True
+
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+# Expose headers
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
