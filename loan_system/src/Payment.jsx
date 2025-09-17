@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
+import api, { getCSRFToken } from '../api';
 
 const PaymentForm = () => {
   const [phone, setPhone] = useState('');
   const [amount, setAmount] = useState('');
-  const [debt, setDebt] = useState(1000); // This is the user's current debt
+  const [debt, setDebt] = useState(1000);
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate phone number format
     if (!/^\+255\d{9}$/.test(phone.trim())) {
       setMessage('Phone number must be in the format +255XXXXXXXXX');
       return;
@@ -26,13 +26,24 @@ const PaymentForm = () => {
       return;
     }
 
-    // Update remaining debt
-    setDebt(prevDebt => prevDebt - payment);
-    setMessage(`Payment of $${payment} successful! Remaining balance: $${debt - payment}`);
+    try {
+      // send to backend, assuming loan id 1 for demo
+      await api.post('payments/', {
+        loan: 1,
+        amount: payment,
+        payment_date: new Date().toISOString().split('T')[0],
+        phone
+      }, {
+        headers: { 'X-CSRFToken': getCSRFToken() }
+      });
 
-    // Clear form
-    setPhone('');
-    setAmount('');
+      setDebt(prevDebt => prevDebt - payment);
+      setMessage(`Payment of $${payment} successful! Remaining balance: $${debt - payment}`);
+      setPhone('');
+      setAmount('');
+    } catch (err) {
+      setMessage('Payment failed on server.');
+    }
   };
 
   return (

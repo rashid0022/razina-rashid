@@ -1,15 +1,12 @@
 import os
 from pathlib import Path
 
-# --- Base Directory ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# --- Security ---
-SECRET_KEY = 'django-insecure-your-secret-key-here'
+SECRET_KEY = 'django-insecure-change-me'
 DEBUG = True
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
-# --- Installed Apps ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -18,27 +15,28 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    # Third party
     'rest_framework',
-    'corsheaders',  # For CORS handling
-    'loans',        # Your app
+    'corsheaders',
+
+    # Local
+    'loans',
 ]
 
-# --- Middleware ---
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # MUST be at the top
+    'corsheaders.middleware.CorsMiddleware',           # lazima kwanza
+    'django.middleware.common.CommonMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',       # CSRF ikae active
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# --- URLs ---
 ROOT_URLCONF = 'loan_system_end.urls'
 
-# --- Templates ---
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -55,10 +53,8 @@ TEMPLATES = [
     },
 ]
 
-# --- WSGI ---
 WSGI_APPLICATION = 'loan_system_end.wsgi.application'
 
-# --- Database ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -66,7 +62,6 @@ DATABASES = {
     }
 }
 
-# --- Password Validators ---
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -74,49 +69,47 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# --- Internationalization ---
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# --- Static & Media ---
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# --- Default Auto Field ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# --- Custom User Model ---
 AUTH_USER_MODEL = 'loans.User'
 
-# --- Django REST Framework ---
+# REST + CORS + CSRF
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',  # Session + CSRF
-        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    ],
+        'rest_framework.permissions.IsAuthenticated',
+    ]
 }
 
-# --- CSRF & Session for React Frontend ---
-CSRF_COOKIE_SAMESITE = None
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SAMESITE = None
-SESSION_COOKIE_SECURE = False
-SESSION_COOKIE_HTTPONLY = True
-
-# --- CORS Settings ---
-CORS_ALLOW_ALL_ORIGINS = True  # Development only
+# Muhimu kwa React
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",   # React dev server
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
-# --- Optional Security Headers ---
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
+# CSRF settings
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Kuondoa matatizo ya cookie
+CSRF_COOKIE_SAMESITE = None
+SESSION_COOKIE_SAMESITE = None
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+
+
+CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+CORS_ALLOW_CREDENTIALS = True

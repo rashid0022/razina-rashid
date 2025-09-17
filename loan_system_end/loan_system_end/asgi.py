@@ -1,16 +1,58 @@
-"""
-ASGI config for loan_system_end project.
+# settings.py
 
-It exposes the ASGI callable as a module-level variable named ``application``.
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'corsheaders',
+    'loans',  # app yako
+]
 
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
-"""
+MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # MUST be first
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+]
 
-import os
+# Local dev settings
+DEBUG = True
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
-from django.core.asgi import get_asgi_application
+# CORS
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'loan_system_end.settings')
+# CSRF & Sessions
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = "Lax"
 
-application = get_asgi_application()
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+}
+
+# Custom user
+AUTH_USER_MODEL = 'loans.User'
+
+# URL conf
+ROOT_URLCONF = "loan_system_end.urls"

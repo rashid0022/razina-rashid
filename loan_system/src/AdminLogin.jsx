@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import api from "./api";
 
 const AdminLogin = ({ onAdminLogin }) => {
-  // Default username na password
   const [username, setUsername] = useState("admin");
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState("");
@@ -14,18 +13,16 @@ const AdminLogin = ({ onAdminLogin }) => {
       .catch(console.error);
   }, []);
 
-  // Handle submit – version mpya ya debugging
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     try {
-      // Request kwa backend
       const res = await api.post("/login/", { username, password });
-      console.log("Login response:", res.data); // debugging
+      console.log("Login response:", res.data);
 
       const user = res.data.user;
       if (user && (user.is_superuser || user.is_staff)) {
-        onAdminLogin(user); // trigger parent callback
+        onAdminLogin(user);
       } else {
         setError("Huna ruhusa ya admin");
       }

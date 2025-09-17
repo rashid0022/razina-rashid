@@ -6,7 +6,7 @@ function isValidNationalId(id) {
 }
 
 function isValidPhone(phone) {
-  return /^\+255\d{9}$/.test(phone);
+  return /^\d{10}$/.test(phone); // assuming local format without country code
 }
 
 const loanTypes = {
@@ -20,35 +20,38 @@ const AdminPanel = ({ state, setState, showNotification }) => {
   const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
 
-  // Fetch pending applications
+  // Fetch pending applications safely
   const fetchApplications = () => {
-    setApplications(state.applications.filter(app => app.status === "pending"));
+    if (Array.isArray(state.applications)) {
+      setApplications(state.applications.filter(app => app.status === "pending"));
+    } else {
+      console.error("Applications data is not an array:", state.applications);
+      setApplications([]);
+    }
   };
 
-  // ✅ Approve loan with calculations
+  useEffect(() => {
+    fetchApplications();
+  }, [state.applications]);
+
   const handleApprove = (id) => {
     const updatedApplications = state.applications.map(app => {
       if (app.id === id) {
-        const loanDetails = loanTypes[app.loanType];
-        const approvedAmount = Math.min(app.requestedAmount, loanDetails.max);
-        const interestRate = loanDetails.rate * 100;
-
-        // Monthly payment (annuity formula)
+        const loanDetails = loanTypes[app.loan_type];
+        const approvedAmount = Math.min(app.requested_amount, loanDetails.max);
         const monthlyRate = loanDetails.rate / 12;
         const monthlyPayment = Math.max(
-          100000, // minimum 100,000
+          100000,
           (approvedAmount * monthlyRate * Math.pow(1 + monthlyRate, loanDetails.term)) /
-            (Math.pow(1 + monthlyRate, loanDetails.term) - 1)
+          (Math.pow(1 + monthlyRate, loanDetails.term) - 1)
         ).toFixed(2);
-
-        // Total payable
         const totalPayable = monthlyPayment * loanDetails.term;
 
         return {
           ...app,
           status: "approved",
           approvedAmount,
-          interestRate,
+          interestRate: loanDetails.rate * 100,
           monthlyPayment: parseFloat(monthlyPayment),
           remainingBalance: parseFloat(totalPayable),
           totalPayable: parseFloat(totalPayable),
@@ -59,33 +62,25 @@ const AdminPanel = ({ state, setState, showNotification }) => {
       return app;
     });
 
-    // Update global state
     setState({ ...state, applications: updatedApplications });
-    // Refresh pending list immediately
     setApplications(updatedApplications.filter(app => app.status === "pending"));
     setSelectedApp(null);
     showNotification("Application approved!", "success");
   };
 
-  // ❌ Reject loan
   const handleReject = (id) => {
     const updatedApplications = state.applications.map(app =>
       app.id === id ? { ...app, status: "rejected" } : app
     );
-
     setState({ ...state, applications: updatedApplications });
     setApplications(updatedApplications.filter(app => app.status === "pending"));
     setSelectedApp(null);
     showNotification("Application rejected!", "success");
   };
 
-  const viewSponsorDetails = (app) => {
-    setSelectedApp(app);
-  };
+  const viewSponsorDetails = (app) => setSelectedApp(app);
 
-  useEffect(() => {
-    fetchApplications();
-  }, [state.applications]);
+  const getMediaUrl = (path) => path ? `http://127.0.0.1:8000${path}` : null;
 
   return (
     <div className="admin-box">
@@ -109,25 +104,17 @@ const AdminPanel = ({ state, setState, showNotification }) => {
           <tbody>
             {applications.map(app => (
               <tr key={app.id}>
-                <td>{app.name}</td>
+                <td>{app.applicant ? `${app.applicant.first_name} ${app.applicant.last_name}` : "N/A"}</td>
                 <td>
-                  {app.nationalId}{" "}
-                  {isValidNationalId(app.nationalId) ? (
-                    <span style={{ color: "green" }}>✅</span>
-                  ) : (
-                    <span style={{ color: "red" }}>❌</span>
-                  )}
+                  {app.applicant?.national_id || "❌"}{" "}
+                  {isValidNationalId(app.applicant?.national_id || "") ? "✅" : "❌"}
                 </td>
                 <td>
-                  {app.phone}{" "}
-                  {isValidPhone(app.phone) ? (
-                    <span style={{ color: "green" }}>✅</span>
-                  ) : (
-                    <span style={{ color: "red" }}>❌</span>
-                  )}
+                  {app.applicant?.phone || "❌"}{" "}
+                  {isValidPhone(app.applicant?.phone || "") ? "✅" : "❌"}
                 </td>
-                <td>{app.loanType}</td>
-                <td>${app.requestedAmount?.toLocaleString() || "0"}</td>
+                <td>{app.loan_type || "N/A"}</td>
+                <td>{app.requested_amount?.toLocaleString() || "0"}</td>
                 <td>{app.status}</td>
                 <td>
                   <div className="admin-actions">
@@ -153,42 +140,26 @@ const AdminPanel = ({ state, setState, showNotification }) => {
             backgroundColor: "#f9f9f9"
           }}
         >
-          <h3>Sponsor Details for {selectedApp.name}</h3>
-          <p><strong>Name:</strong> {selectedApp.sponsorName}</p>
-          <p><strong>Address:</strong> {selectedApp.sponsorAddress}</p>
+          <h3>Sponsor Details for {selectedApp.applicant ? `${selectedApp.applicant.first_name} ${selectedApp.applicant.last_name}` : "N/A"}</h3>
+          <p><strong>Name:</strong> {selectedApp.sponsor_name}</p>
+          <p><strong>Address:</strong> {selectedApp.sponsor_address}</p>
           <p>
-            <strong>National ID:</strong> {selectedApp.sponsorNationalId}{" "}
-            {isValidNationalId(selectedApp.sponsorNationalId) ? (
-              <span style={{ color: "green" }}>✅</span>
-            ) : (
-              <span style={{ color: "red" }}>❌</span>
-            )}
+            <strong>National ID:</strong> {selectedApp.sponsor_national_id}{" "}
+            {isValidNationalId(selectedApp.sponsor_national_id) ? "✅" : "❌"}
           </p>
           <p>
-            <strong>Phone:</strong> {selectedApp.sponsorPhone}{" "}
-            {isValidPhone(selectedApp.sponsorPhone) ? (
-              <span style={{ color: "green" }}>✅</span>
-            ) : (
-              <span style={{ color: "red" }}>❌</span>
-            )}
+            <strong>Phone:</strong> {selectedApp.sponsor_phone}{" "}
+            {isValidPhone(selectedApp.sponsor_phone) ? "✅" : "❌"}
           </p>
-          <p><strong>Email:</strong> {selectedApp.sponsorEmail}</p>
+          <p><strong>Email:</strong> {selectedApp.sponsor_email}</p>
           <p>
             <strong>Photo:</strong><br />
-            {selectedApp.sponsorPhoto ? (
-              typeof selectedApp.sponsorPhoto === "string" ? (
-                <img
-                  src={selectedApp.sponsorPhoto}
-                  alt="Sponsor"
-                  style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
-                />
-              ) : (
-                <img
-                  src={URL.createObjectURL(selectedApp.sponsorPhoto)}
-                  alt="Sponsor"
-                  style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
-                />
-              )
+            {selectedApp.sponsor_photo ? (
+              <img
+                src={typeof selectedApp.sponsor_photo === "string" ? getMediaUrl(selectedApp.sponsor_photo) : URL.createObjectURL(selectedApp.sponsor_photo)}
+                alt="Sponsor"
+                style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
+              />
             ) : (
               "No photo uploaded"
             )}

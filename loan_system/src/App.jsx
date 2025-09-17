@@ -5,13 +5,14 @@ import Sidebar from "./Sidebar";
 import Home from "./Home";
 import ApplyLoan from "./ApplyLoan";
 import Login from "./Login";
+import Register from "./Register";
 import AdminLogin from "./AdminLogin";
 import AdminPanel from "./AdminPanel";
 import Dashboard from "./Dashboard";
 import Repayment from "./Repayment";
 import Notification from "./Notification";
 import Contract from "./Contract";
-import api from "./api"; // Axios instance
+import api from "./api";
 import "./App.css";
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
 
   const [page, setPage] = useState("home");
   const [notification, setNotification] = useState(null);
+  const [loans, setLoans] = useState([]); // ⚠️ Hapa ndio muhimu
 
   // ----------------------
   // Notifications helper
@@ -56,30 +58,13 @@ function App() {
   useEffect(() => {
     const fetchLoans = async () => {
       try {
-        console.log("Fetching loans from API...");
         const res = await api.get("loans/");
-        console.log("Loans fetched successfully:", res.data);
-        setState((prev) => ({ ...prev, applications: res.data }));
+        setLoans(res.data);
       } catch (err) {
-        console.error("Error in fetchLoans:", err);
-        
-        if (err.response) {
-          // Server responded with an error
-          console.error("Error response:", err.response.data);
-          showNotification(
-            `Error fetching loans: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
-            "error"
-          );
-        } else if (err.request) {
-          console.error("No response received:", err.request);
-          showNotification("No response from server while fetching loans. Is Django running?", "error");
-        } else {
-          console.error("Error:", err.message);
-          showNotification(`Error: ${err.message}`, "error");
-        }
+        console.error("Error fetching loans:", err);
+        showNotification("Failed to fetch loans", "error");
       }
     };
-    
     fetchLoans();
   }, []);
 
@@ -98,24 +83,10 @@ function App() {
         });
         setState((prev) => ({ ...prev, users: usersObj }));
       } catch (err) {
-        console.error("Error in fetchUsers:", err);
-        
-        if (err.response) {
-          console.error("Error fetching users:", err.response.data);
-          showNotification(
-            `Error fetching users: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
-            "error"
-          );
-        } else if (err.request) {
-          console.error("No response received:", err.request);
-          showNotification("No response from server while fetching users", "error");
-        } else {
-          console.error("Error:", err.message);
-          showNotification(`Error: ${err.message}`, "error");
-        }
+        console.error("Error fetching users:", err);
+        showNotification("Error fetching users", "error");
       }
     };
-
     fetchUsers();
   }, [state.isAdmin]);
 
@@ -129,32 +100,40 @@ function App() {
 
       <div className="content-wrapper">
         <div className="main-content">
-          {/* Home page */}
           {page === "home" && <Home loanTypes={loanTypes} setPage={setPage} />}
-
-          {/* Apply Loan */}
+          {page === "register" && (
+            <Register
+              setPage={setPage}
+              state={state}
+              setState={setState}
+              showNotification={showNotification}
+            />
+          )}
           {page === "apply" && (
             <ApplyLoan
               state={state}
               setState={setState}
               setPage={setPage}
               showNotification={showNotification}
-              api={api}
             />
           )}
-
-          {/* Login */}
           {page === "login" && (
             <Login
+              setPage={setPage}
+              state={state}
+              setState={setState}
+              showNotification={showNotification}
+            />
+          )}
+          {page === "dashboard" && (
+            <Dashboard
               state={state}
               setState={setState}
               setPage={setPage}
-              showNotification={showNotification}
               api={api}
+              loans={loans}
             />
           )}
-
-          {/* Admin Login */}
           {page === "admin-login" && (
             <AdminLogin
               onAdminLogin={() => {
@@ -162,11 +141,8 @@ function App() {
                 setPage("admin-panel");
                 showNotification("Admin logged in successfully", "success");
               }}
-              api={api}
             />
           )}
-
-          {/* Admin Panel */}
           {page === "admin-panel" && (
             <AdminPanel
               state={state}
@@ -175,13 +151,6 @@ function App() {
               api={api}
             />
           )}
-
-          {/* Dashboard */}
-          {page === "dashboard" && (
-            <Dashboard state={state} setState={setState} setPage={setPage} api={api} />
-          )}
-
-          {/* Repayment */}
           {page === "repayment" && (
             <Repayment
               state={state}
@@ -190,8 +159,6 @@ function App() {
               api={api}
             />
           )}
-
-          {/* Contract */}
           {page === "contract" && (
             <Contract
               state={state}
@@ -202,7 +169,6 @@ function App() {
             />
           )}
         </div>
-
         <Sidebar state={state} />
       </div>
     </div>
