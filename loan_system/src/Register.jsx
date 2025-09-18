@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api, { fetchCSRF } from "./api"; // hakikisha fetchCSRF imesafirishwa
+import axios from "axios";
 
 export default function Register({ setPage, state, setState, showNotification }) {
   const [username, setUsername] = useState("");
@@ -14,10 +14,9 @@ export default function Register({ setPage, state, setState, showNotification })
     }
 
     try {
-      // Fetch CSRF token before POST
-      await fetchCSRF();
-
-      const res = await api.post("register/", { username, password, email });
+      // Direct POST without CSRF
+      const res = await axios.post("http://127.0.0.1:8000/api/register/", { username, password, email });
+      
       if (res.status === 201) {
         showNotification("Account created! Proceed to apply loan", "success");
         setState(prev => ({ ...prev, currentUser: username }));

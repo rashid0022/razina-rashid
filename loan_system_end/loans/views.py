@@ -1,4 +1,5 @@
 from django.shortcuts import redirect
+from rest_framework.permissions import AllowAny
 from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
@@ -102,7 +103,7 @@ def register_and_apply(request):
 # APPLY LOAN (logged-in user)
 # =========================
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@permission_classes([AllowAny])
 def apply_loan(request):
     """
     Logged-in user applies for a loan. Backend uses request.user.
@@ -163,19 +164,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class LoanApplicationViewSet(viewsets.ModelViewSet):
     serializer_class = LoanApplicationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
-    http_method_names = ['get','post','patch']
+    permission_classes = [AllowAny]   # ruhusu kila mtu bila login
+    http_method_names = ['get', 'post', 'patch']
     queryset = LoanApplication.objects.all()
 
     def get_queryset(self):
-        user = self.request.user
-        if user.is_staff or getattr(user, 'is_admin', False):
-            return LoanApplication.objects.all()
-        return LoanApplication.objects.filter(applicant=user)
+        return LoanApplication.objects.all()
 
     def perform_create(self, serializer):
-        serializer.save(applicant=self.request.user)
-
+        serializer.save()
 class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
