@@ -15,6 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['is_admin']
 
+
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -29,12 +30,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
         validated_data['password'] = make_password(validated_data['password'])
         return super().create(validated_data)
 
+
 # ===== Loan Application Serializer =====
 class LoanApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanApplication
         fields = '__all__'
-        read_only_fields = ['applicant', 'created_at', 'updated_at']
+        read_only_fields = ['applicant', 'created_at', 'updated_at', 'sponsor_photo']
+
 
 # ===== Payment Serializer =====
 class PaymentSerializer(serializers.ModelSerializer):
@@ -42,6 +45,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
+
 
 # ===== Register & Apply Serializer =====
 class RegisterAndApplySerializer(serializers.Serializer):
@@ -54,7 +58,7 @@ class RegisterAndApplySerializer(serializers.Serializer):
     phone = serializers.CharField()
     address = serializers.CharField()
     national_id = serializers.CharField()
-    profile_photo = serializers.CharField(required=False)  # base64
+    profile_photo = serializers.CharField(required=False, allow_null=True)  # base64
 
     # --- Loan fields ---
     loan_type = serializers.ChoiceField(choices=LoanApplication.LOAN_TYPES)
@@ -68,37 +72,45 @@ class RegisterAndApplySerializer(serializers.Serializer):
     sponsor_national_id = serializers.CharField()
     sponsor_phone = serializers.CharField()
     sponsor_email = serializers.EmailField()
-    sponsor_photo = serializers.CharField(required=False)  # base64
+    sponsor_photo = serializers.CharField(required=False, allow_null=True)  # base64
 
+    # ===== Helper method to save base64 photos safely =====
+    def save_base64_image(self, instance, base64_data, filename_field, prefix):
+        if base64_data:
+            try:
+                if ';base64,' in base64_data:
+                    format, imgstr = base64_data.split(';base64,')
+                else:  # fallback if format missing
+                    imgstr = base64_data
+                    format = 'data:image/png'
+                ext = format.split('/')[-1]
+                getattr(instance, filename_field).save(
+                    f"{prefix}_{filename_field}.{ext}",
+                    ContentFile(base64.b64decode(imgstr))
+                )
+                instance.save()
+            except Exception as e:
+                print(f"Error saving image {filename_field}: {e}")
+
+    # ===== Create method =====
     def create(self, validated_data):
-        # Extract photos
         profile_photo_data = validated_data.pop('profile_photo', None)
         sponsor_photo_data = validated_data.pop('sponsor_photo', None)
 
-        # Create user
-        user_data = {
-            'username': validated_data['username'],
-            'password': make_password(validated_data['password']),
-            'email': validated_data['email'],
-            'first_name': validated_data['first_name'],
-            'last_name': validated_data['last_name'],
-            'phone': validated_data['phone'],
-            'address': validated_data['address'],
-            'national_id': validated_data['national_id'],
-        }
-        user = User.objects.create(**user_data)
+        # --- Create user ---
+        user = User.objects.create(
+            username=validated_data['username'],
+            password=make_password(validated_data['password']),
+            email=validated_data['email'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            phone=validated_data['phone'],
+            address=validated_data['address'],
+            national_id=validated_data['national_id'],
+        )
+        self.save_base64_image(user, profile_photo_data, 'profile_photo', user.username)
 
-        # Save profile photo
-        if profile_photo_data:
-            format, imgstr = profile_photo_data.split(';base64,')
-            ext = format.split('/')[-1]
-            user.profile_photo.save(
-                f"{user.username}_profile.{ext}",
-                ContentFile(base64.b64decode(imgstr))
-            )
-            user.save()
-
-        # Create loan application
+        # --- Create loan application ---
         loan = LoanApplication.objects.create(
             applicant=user,
             loan_type=validated_data['loan_type'],
@@ -111,15 +123,6 @@ class RegisterAndApplySerializer(serializers.Serializer):
             sponsor_phone=validated_data['sponsor_phone'],
             sponsor_email=validated_data['sponsor_email'],
         )
-
-        # Save sponsor photo
-        if sponsor_photo_data:
-            format, imgstr = sponsor_photo_data.split(';base64,')
-            ext = format.split('/')[-1]
-            loan.sponsor_photo.save(
-                f"{user.username}_sponsor.{ext}",
-                ContentFile(base64.b64decode(imgstr))
-            )
-            loan.save()
+        self.save_base64_image(loan, sponsor_photo_data, 'sponsor_photo', user.username)
 
         return {'user': user, 'loan_application': loan}

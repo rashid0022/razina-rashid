@@ -1,21 +1,12 @@
 import axios from "axios";
 
-// 1️⃣ Unda Axios instance
+// 1️⃣ Axios instance
 const api = axios.create({
-  baseURL: "http://localhost:8000/api",
-  withCredentials: true, // muhimu kwa CSRF
+  baseURL: "http://localhost:8000/api", // base URL ya backend
+  withCredentials: true,                 // ✅ muhimu kwa CSRF cookies
 });
 
-// 2️⃣ Optional: fetch CSRF token once at app start
-axios.get("http://localhost:8000/csrf/", {
-  withCredentials: true
-})
-.then(response => {
-  console.log("CSRF token fetched successfully:", response.data.csrfToken);
-})
-.catch(err => console.error("CSRF fetch error:", err));
-
-// 3️⃣ Helper: get cookie by name
+// 2️⃣ Helper: pata cookie kwa jina
 function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== "") {
@@ -31,27 +22,37 @@ function getCookie(name) {
   return cookieValue;
 }
 
-// 4️⃣ Add CSRF token automatically for unsafe methods
-api.interceptors.request.use((config) => {
-  const csrfToken = getCookie("csrftoken");
-  
-  if (csrfToken && ["post", "put", "delete", "patch"].includes(config.method?.toLowerCase())) {
-    config.headers["X-CSRFToken"] = csrfToken;
-  }
-  return config;
-}, (error) => Promise.reject(error));
+// 3️⃣ Request interceptor: ongeza CSRF token
+api.interceptors.request.use(
+  (config) => {
+    const csrfToken = getCookie("csrftoken");
+    if (csrfToken && ["post", "put", "patch", "delete"].includes(config.method?.toLowerCase())) {
+      config.headers["X-CSRFToken"] = csrfToken;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// 5️⃣ Response interceptor
+// 4️⃣ Response interceptor: handle errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 403 || error.response?.status === 401) {
-      console.error("Authentication error:", error.response);
-      window.location.href = "/#login";
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 401 || status === 403) {
+        console.error("Authentication/CSRF error:", error.response);
+        // Optional: redirect to login page
+        window.location.href = "/#login";
+      }
     }
     return Promise.reject(error);
   }
 );
 
-// 6️⃣ Export instance
+// 5️⃣ Optional: fetch CSRF token once at app start
+api.get("/csrf/")
+  .then((res) => console.log("CSRF token fetched:", res.data.csrfToken))
+  .catch((err) => console.error("CSRF fetch error:", err));
+
 export default api;

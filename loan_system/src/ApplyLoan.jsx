@@ -1,11 +1,20 @@
-import { useState } from "react";
+// ApplyLoan.jsx
+import { useState, useEffect } from "react";
 import api from "./api";
 
 export default function ApplyLoan({ state, setState, showNotification, setPage }) {
+  const [step, setStep] = useState(1);
   const [preview, setPreview] = useState(null);
   const [sponsorPreview, setSponsorPreview] = useState(null);
-  const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [csrfToken, setCsrfToken] = useState("");
+
+  // Get CSRF token on mount
+  useEffect(() => {
+    api.get("csrf/")
+      .then(res => setCsrfToken(res.data.csrfToken))
+      .catch(err => console.error(err));
+  }, []);
 
   const fileToBase64 = (file, callback) => {
     const reader = new FileReader();
@@ -20,16 +29,10 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
     fileToBase64(file, (base64) => {
       if (e.target.name === "profile_photo") {
         setPreview(base64);
-        setState(prev => ({ 
-          ...prev, 
-          tempApplicant: { ...prev.tempApplicant, profile_photo: base64 } 
-        }));
+        setState(prev => ({ ...prev, tempApplicant: { ...prev.tempApplicant, profile_photo: base64 } }));
       } else if (e.target.name === "sponsor_photo") {
         setSponsorPreview(base64);
-        setState(prev => ({ 
-          ...prev, 
-          tempApplicant: { ...prev.tempApplicant, sponsor_photo: base64 } 
-        }));
+        setState(prev => ({ ...prev, tempApplicant: { ...prev.tempApplicant, sponsor_photo: base64 } }));
       }
     });
   };
@@ -39,85 +42,96 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
     const form = new FormData(e.target);
     const data = Object.fromEntries(form.entries());
 
-    if (!/^\d{20}$/.test(data.national_id)) return showNotification("Invalid National ID", "error");
-    if (!/^\+255\d{9}$/.test(data.phone)) return showNotification("Invalid phone", "error");
-    if (data.password !== data.confirm_password) return showNotification("Passwords do not match", "error");
     if (!preview) return showNotification("Upload your photo", "error");
+    if (!/^\d{20}$/.test(data.national_id)) return showNotification("Invalid National ID", "error");
+    if (!/^\+255\d{9}$/.test(data.phone)) return showNotification("Invalid phone number", "error");
+    if (data.password !== data.confirm_password) return showNotification("Passwords do not match", "error");
 
-    setState(prev => ({
-      ...prev,
-      tempApplicant: { ...data, profile_photo: preview }
-    }));
+    setState(prev => ({ ...prev, tempApplicant: { ...data, profile_photo: preview } }));
     setStep(2);
   };
 
   const handleSponsorSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    if (!csrfToken) return showNotification("CSRF token missing", "error");
 
     const form = new FormData(e.target);
     const data = Object.fromEntries(form.entries());
 
-    if (!/^\d{20}$/.test(data.sponsor_national_id)) return showNotification("Invalid sponsor ID", "error");
-    if (!/^\+255\d{9}$/.test(data.sponsor_phone)) return showNotification("Invalid sponsor phone", "error");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.sponsor_email)) return showNotification("Invalid sponsor email", "error");
     if (!sponsorPreview) return showNotification("Upload sponsor photo", "error");
+    if (!/^\d{20}$/.test(data.sponsor_national_id)) return showNotification("Invalid sponsor ID", "error");
+
+    setIsSubmitting(true);
 
     try {
-      const applicationData = {
-        ...state.tempApplicant,
+      // Split full name into first_name and last_name
+      const [first_name, ...rest] = state.tempApplicant.name.split(" ");
+      const last_name = rest.join(" ");
+
+      // Payload matches RegisterAndApplySerializer
+      const payload = {
+        username: state.tempApplicant.username,
+        password: state.tempApplicant.password,
+        email: state.tempApplicant.email,
+        first_name,
+        last_name,
+        phone: state.tempApplicant.phone,
+        address: state.tempApplicant.address,
+        national_id: state.tempApplicant.national_id,
+        profile_photo: preview,
+        loan_type: state.tempApplicant.loan_type,
+        requested_amount: parseFloat(state.tempApplicant.requested_amount),
+        assets_value: parseFloat(state.tempApplicant.assets_value),
+        monthly_income: parseFloat(state.tempApplicant.monthly_income),
         sponsor_name: data.sponsor_name,
         sponsor_address: data.sponsor_address,
         sponsor_national_id: data.sponsor_national_id,
         sponsor_phone: data.sponsor_phone,
         sponsor_email: data.sponsor_email,
         sponsor_photo: sponsorPreview,
-        user_data: {
-          username: state.tempApplicant.username,
-          password: state.tempApplicant.password,
-          first_name: state.tempApplicant.name.split(" ")[0],
-          last_name: state.tempApplicant.name.split(" ").slice(1).join(" "),
-          email: state.tempApplicant.email,
-          phone: state.tempApplicant.phone,
-          address: state.tempApplicant.address,
-          national_id: state.tempApplicant.national_id,
-        },
       };
 
-      const response = await api.post("loans/", applicationData);
+      const response = await api.post("register-apply/", payload, {
+        headers: { "X-CSRFToken": csrfToken }
+      });
 
       if (response.status === 201) {
+        const newUser = response.data.user;
+        const newLoan = response.data.loan_application;
+
         showNotification("Application submitted successfully!", "success");
+
         setState(prev => ({
           ...prev,
-          currentUser: response.data.user?.username || prev.currentUser,
-          applications: [...(prev.applications || []), response.data.loan_application]
+          currentUser: newUser?.username || prev.currentUser,
+          applications: [...(prev.applications || []), newLoan]
         }));
-        e.target.reset();
+
+        setStep(1);
         setPreview(null);
         setSponsorPreview(null);
-        setStep(1);
         setPage("dashboard");
       }
     } catch (err) {
-      console.error("Submission error:", err);
-      showNotification("Error submitting application. Please check your connection.", "error");
+      console.error("Submission error:", err.response?.data || err);
+      showNotification("Error submitting application. Check your details and connection.", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="applicant-form">
-      <h2>Loan Application Form</h2>
+    <div className="loan-form">
+      <h2>Apply for a Loan</h2>
+
       {step === 1 && (
         <form onSubmit={handleApplicantSave}>
           <input name="username" placeholder="Username" required />
           <input name="name" placeholder="Full Name" required />
-          <input name="address" placeholder="Postal Address" required />
-          <input name="national_id" placeholder="National ID" required maxLength="20" />
-          <input name="phone" placeholder="Phone (+255XXXXXXXXX)" required maxLength="13" />
-          <input name="email" placeholder="Email" type="email" />
+          <input name="address" placeholder="Address" required />
+          <input name="national_id" placeholder="National ID" maxLength="20" required />
+          <input name="phone" placeholder="Phone (+255XXXXXXXXX)" maxLength="13" required />
+          <input name="email" type="email" placeholder="Email" />
           <select name="loan_type" required>
             <option value="">Select Loan Type</option>
             <option value="home">Home</option>
@@ -125,30 +139,30 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
             <option value="education">Education</option>
             <option value="business">Business</option>
           </select>
-          <input type="number" name="requested_amount" placeholder="Requested Amount" required min="1" />
-          <input type="number" name="assets_value" placeholder="Total Assets Value" required min="1" />
-          <input type="number" name="monthly_income" placeholder="Monthly Income" required min="1" />
-          <input type="password" name="password" placeholder="Password" required minLength="6" />
-          <input type="password" name="confirm_password" placeholder="Confirm Password" required minLength="6" />
+          <input name="requested_amount" type="number" min="1" placeholder="Requested Amount" required />
+          <input name="assets_value" type="number" min="1" placeholder="Assets Value" required />
+          <input name="monthly_income" type="number" min="1" placeholder="Monthly Income" required />
+          <input name="password" type="password" minLength="6" placeholder="Password" required />
+          <input name="confirm_password" type="password" minLength="6" placeholder="Confirm Password" required />
           <label>Upload Profile Photo:</label>
           <input type="file" name="profile_photo" accept="image/*" onChange={handleFileChange} required />
-          {preview && <img src={preview} alt="Preview" style={{ width: "100px", marginTop: "10px" }} />}
-          <button type="submit">Save & Continue</button>
+          {preview && <img src={preview} alt="Preview" style={{ width: "100px" }} />}
+          <button type="submit">Next: Sponsor Info</button>
         </form>
       )}
 
       {step === 2 && (
         <form onSubmit={handleSponsorSubmit}>
-          <input name="sponsor_name" placeholder="Sponsor Full Name" required />
+          <input name="sponsor_name" placeholder="Sponsor Name" required />
           <input name="sponsor_address" placeholder="Sponsor Address" required />
-          <input name="sponsor_national_id" placeholder="Sponsor ID" required maxLength="20" />
-          <input name="sponsor_phone" placeholder="Sponsor Phone (+255XXXXXXXXX)" required maxLength="13" />
-          <input name="sponsor_email" placeholder="Sponsor Email" type="email" required />
+          <input name="sponsor_national_id" placeholder="Sponsor National ID" maxLength="20" required />
+          <input name="sponsor_phone" placeholder="Sponsor Phone (+255XXXXXXXXX)" maxLength="13" required />
+          <input name="sponsor_email" type="email" placeholder="Sponsor Email" required />
           <label>Upload Sponsor Photo:</label>
           <input type="file" name="sponsor_photo" accept="image/*" onChange={handleFileChange} required />
-          {sponsorPreview && <img src={sponsorPreview} alt="Sponsor Preview" style={{ width: "100px", marginTop: "10px" }} />}
+          {sponsorPreview && <img src={sponsorPreview} alt="Sponsor Preview" style={{ width: "100px" }} />}
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit Application"}
+            {isSubmitting ? "Submitting..." : "Submit Loan Application"}
           </button>
         </form>
       )}

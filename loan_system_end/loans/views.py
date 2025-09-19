@@ -1,12 +1,12 @@
+# loans/views.py
 from django.shortcuts import redirect
-from django.http import JsonResponse
 from django.middleware.csrf import get_token
+from django.contrib.auth import authenticate, login
+from django.views.decorators.csrf import ensure_csrf_cookie
+
 from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from django.contrib.auth import authenticate, login
-from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework.decorators import action
 
 from .models import User, LoanApplication, Payment
 from .serializers import (
@@ -18,26 +18,22 @@ from .serializers import (
 )
 from .permissions import IsOwnerOrAdmin
 
-# ===== Home view redirects to React frontend =====
+# ================= Home view redirects to React frontend =================
 @ensure_csrf_cookie
 def home(request):
-    return redirect("http://localhost:5173")  # React dev server
+    return redirect("http://localhost:5173")
 
-# ===== CSRF Token View =====
+# ================= CSRF Token View =================
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def get_csrf_token(request):
     token = get_token(request)
     response = Response({'csrfToken': token})
-    
-    # ✅ ADD CORS HEADERS MANUALLY
-    response['Access-Control-Allow-Origin'] = 'http://localhost:5173'
-    response['Access-Control-Allow-Credentials'] = 'true'
-    response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
-    
+    response["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response["Access-Control-Allow-Credentials"] = "true"
     return response
-# ===== Login View =====
-# ===== Login View =====
+
+# ================= Login View =================
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def user_login(request):
@@ -45,7 +41,8 @@ def user_login(request):
     password = request.data.get('password')
 
     if not username or not password:
-        response = Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
+        response = Response({'error': 'Username and password are required'},
+                            status=status.HTTP_400_BAD_REQUEST)
     else:
         user = authenticate(request, username=username, password=password)
         if user:
@@ -61,16 +58,14 @@ def user_login(request):
                 }
             })
         else:
-            response = Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-    
-    # ✅ ADD CORS HEADERS TO ALL RESPONSES
-    response['Access-Control-Allow-Origin'] = 'http://localhost:5173'
-    response['Access-Control-Allow-Credentials'] = 'true'
-    response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken'
-    
+            response = Response({'error': 'Invalid credentials'},
+                                status=status.HTTP_401_UNAUTHORIZED)
+
+    response["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response["Access-Control-Allow-Credentials"] = "true"
     return response
-# ===== User Registration =====
-# ===== User Registration =====
+
+# ================= User Registration =================
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def user_register(request):
@@ -87,24 +82,27 @@ def user_register(request):
         }, status=status.HTTP_201_CREATED)
     else:
         response = Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    # ✅ ADD CORS HEADERS
-    response['Access-Control-Allow-Origin'] = 'http://localhost:5173'
-    response['Access-Control-Allow-Credentials'] = 'true'
+
+    response["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response["Access-Control-Allow-Credentials"] = "true"
     return response
-# ===== Register + Apply Loan View =====
+
+# ================= Register + Apply Loan =================
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def register_and_apply(request):
     """
-    Creates user and loan application at the same time.
-    Returns the new user and loan application.
+    Hii view inahakikisha:
+    1️⃣ User anaundwa na password
+    2️⃣ Loan application inaundwa
+    3️⃣ User ana-login automatically
+    4️⃣ Response inareturn user info + loan info
     """
     serializer = RegisterAndApplySerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    result = serializer.save()  # creates both User and LoanApplication
+    result = serializer.save()
 
-    # Auto-login the user
+    # Auto-login
     user = authenticate(
         request,
         username=request.data.get('username'),
@@ -113,25 +111,33 @@ def register_and_apply(request):
     if user:
         login(request, user)
 
-    return Response({
+    # Hapa tunatumia 'name' field mpya au applicant.get_full_name() kama 'name' haipo
+    loan = result['loan_application']
+    loan_name = getattr(loan, 'name', None)  # kutumia 'name' field ikiwa ipo
+    if not loan_name and loan.applicant:
+        loan_name = loan.applicant.get_full_name() or loan.applicant.username
+
+    response = Response({
         "user": {"username": result['user'].username},
-        "loan_application": {"id": result['loan_application'].id}
+        "loan_application": {
+            "id": loan.id,
+            "name": loan_name,
+            "loanType": loan.loan_type,
+            "requestedAmount": loan.requested_amount,
+            "status": loan.status
+        }
     }, status=201)
 
-# ===== DRF ViewSets =====
+    response["Access-Control-Allow-Origin"] = "http://localhost:5173"
+    response["Access-Control-Allow-Credentials"] = "true"
+    return response
 
-# loans/views.py - HAKIKISHA UNA HII CLASS
+# ================= DRF ViewSets =================
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
 
-    # Optional: Add CORS headers
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        response['Access-Control-Allow-Origin'] = 'http://localhost:5173'
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
 class LoanApplicationViewSet(viewsets.ModelViewSet):
     queryset = LoanApplication.objects.all()
     serializer_class = LoanApplicationSerializer
@@ -146,24 +152,14 @@ class LoanApplicationViewSet(viewsets.ModelViewSet):
         return LoanApplication.objects.none()
 
     def perform_create(self, serializer):
-        serializer.save(applicant=self.request.user)
-    
-    # ✅ ADD HII FUNCTION MPYA BAADA YA CODE YAKO ILIYOPO
-    def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        response['Access-Control-Allow-Origin'] = 'http://localhost:5173'
-        response['Access-Control-Allow-Credentials'] = 'true'
-        return response
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_authenticated:
-            if user.is_staff or user.is_superuser:
-                return LoanApplication.objects.all()
-            return LoanApplication.objects.filter(applicant=user)
-        return LoanApplication.objects.none()
+        # Debug: print incoming data
+        print("DATA RECEIVED:", self.request.data)
 
-    def perform_create(self, serializer):
-        serializer.save(applicant=self.request.user)
+        # If user is authenticated, attach automatically
+        if self.request.user.is_authenticated:
+            serializer.save(applicant=self.request.user)
+        else:
+            raise serializers.ValidationError("User must be logged in to apply")
 
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()

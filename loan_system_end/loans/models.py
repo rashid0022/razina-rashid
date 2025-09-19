@@ -53,6 +53,14 @@ class LoanApplication(models.Model):
     sponsor_email = models.EmailField(blank=True)
     sponsor_photo = models.ImageField(upload_to='sponsors/', blank=True, null=True)
 
+    # Optional: store applicant's name directly (automatic copy from user)
+    name = models.CharField(max_length=255, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.name and self.applicant:
+            self.name = self.applicant.get_full_name() or self.applicant.username
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.applicant.username} - {self.loan_type}"
 

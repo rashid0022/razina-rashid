@@ -22,26 +22,26 @@ const AdminPanel = ({ state, setState, showNotification }) => {
 
   // Fetch pending applications
   const fetchApplications = () => {
-    setApplications(state.applications.filter(app => app.status === "pending"));
+    setApplications(state.applications?.filter(app => app.status === "pending") || []);
   };
 
-  // ✅ Approve loan with calculations
   const handleApprove = (id) => {
-    const updatedApplications = state.applications.map(app => {
+    const updatedApplications = state.applications?.map(app => {
       if (app.id === id) {
-        const loanDetails = loanTypes[app.loanType];
-        const approvedAmount = Math.min(app.requestedAmount, loanDetails.max);
+        const loanTypeKey = app.loanType || "home"; // default to home
+        const loanDetails = loanTypes[loanTypeKey];
+
+        const requestedAmount = app.requestedAmount || 0;
+        const approvedAmount = Math.min(requestedAmount, loanDetails.max);
         const interestRate = loanDetails.rate * 100;
 
-        // Monthly payment (annuity formula)
         const monthlyRate = loanDetails.rate / 12;
         const monthlyPayment = Math.max(
-          100000, // minimum 100,000
+          100000,
           (approvedAmount * monthlyRate * Math.pow(1 + monthlyRate, loanDetails.term)) /
-            (Math.pow(1 + monthlyRate, loanDetails.term) - 1)
+          (Math.pow(1 + monthlyRate, loanDetails.term) - 1)
         ).toFixed(2);
 
-        // Total payable
         const totalPayable = monthlyPayment * loanDetails.term;
 
         return {
@@ -50,28 +50,25 @@ const AdminPanel = ({ state, setState, showNotification }) => {
           approvedAmount,
           interestRate,
           monthlyPayment: parseFloat(monthlyPayment),
-          remainingBalance: parseFloat(totalPayable),
           totalPayable: parseFloat(totalPayable),
+          remainingBalance: parseFloat(totalPayable),
           amountPaid: 0,
           term: loanDetails.term
         };
       }
       return app;
-    });
+    }) || [];
 
-    // Update global state
     setState({ ...state, applications: updatedApplications });
-    // Refresh pending list immediately
     setApplications(updatedApplications.filter(app => app.status === "pending"));
     setSelectedApp(null);
     showNotification("Application approved!", "success");
   };
 
-  // ❌ Reject loan
   const handleReject = (id) => {
-    const updatedApplications = state.applications.map(app =>
+    const updatedApplications = state.applications?.map(app =>
       app.id === id ? { ...app, status: "rejected" } : app
-    );
+    ) || [];
 
     setState({ ...state, applications: updatedApplications });
     setApplications(updatedApplications.filter(app => app.status === "pending"));
@@ -109,26 +106,20 @@ const AdminPanel = ({ state, setState, showNotification }) => {
           <tbody>
             {applications.map(app => (
               <tr key={app.id}>
-                <td>{app.name}</td>
+                <td>{app.name || app.username || "N/A"}</td>
                 <td>
-                  {app.nationalId}{" "}
-                  {isValidNationalId(app.nationalId) ? (
-                    <span style={{ color: "green" }}>✅</span>
-                  ) : (
-                    <span style={{ color: "red" }}>❌</span>
-                  )}
+                  {app.nationalId || "N/A"}{" "}
+                  {isValidNationalId(app.nationalId) ? <span style={{ color: "green" }}>✅</span> :
+                    <span style={{ color: "red" }}>❌</span>}
                 </td>
                 <td>
-                  {app.phone}{" "}
-                  {isValidPhone(app.phone) ? (
-                    <span style={{ color: "green" }}>✅</span>
-                  ) : (
-                    <span style={{ color: "red" }}>❌</span>
-                  )}
+                  {app.phone || "N/A"}{" "}
+                  {isValidPhone(app.phone) ? <span style={{ color: "green" }}>✅</span> :
+                    <span style={{ color: "red" }}>❌</span>}
                 </td>
-                <td>{app.loanType}</td>
-                <td>${app.requestedAmount?.toLocaleString() || "0"}</td>
-                <td>{app.status}</td>
+                <td>{app.loanType || "N/A"}</td>
+                <td>${(app.requestedAmount ?? 0).toLocaleString()}</td>
+                <td>{app.status || "pending"}</td>
                 <td>
                   <div className="admin-actions">
                     <button className="approve-btn" onClick={() => handleApprove(app.id)}>Approve</button>
@@ -143,55 +134,36 @@ const AdminPanel = ({ state, setState, showNotification }) => {
       )}
 
       {selectedApp && (
-        <div
-          className="sponsor-details"
-          style={{
-            marginTop: "20px",
-            padding: "15px",
-            border: "1px solid #ddd",
-            borderRadius: "5px",
-            backgroundColor: "#f9f9f9"
-          }}
-        >
-          <h3>Sponsor Details for {selectedApp.name}</h3>
-          <p><strong>Name:</strong> {selectedApp.sponsorName}</p>
-          <p><strong>Address:</strong> {selectedApp.sponsorAddress}</p>
+        <div className="sponsor-details" style={{
+          marginTop: "20px",
+          padding: "15px",
+          border: "1px solid #ddd",
+          borderRadius: "5px",
+          backgroundColor: "#f9f9f9"
+        }}>
+          <h3>Sponsor Details for {selectedApp.name || selectedApp.username || "N/A"}</h3>
+          <p><strong>Name:</strong> {selectedApp.sponsorName || "N/A"}</p>
+          <p><strong>Address:</strong> {selectedApp.sponsorAddress || "N/A"}</p>
           <p>
-            <strong>National ID:</strong> {selectedApp.sponsorNationalId}{" "}
-            {isValidNationalId(selectedApp.sponsorNationalId) ? (
-              <span style={{ color: "green" }}>✅</span>
-            ) : (
-              <span style={{ color: "red" }}>❌</span>
-            )}
+            <strong>National ID:</strong> {selectedApp.sponsorNationalId || "N/A"}{" "}
+            {isValidNationalId(selectedApp.sponsorNationalId) ? <span style={{ color: "green" }}>✅</span> :
+              <span style={{ color: "red" }}>❌</span>}
           </p>
           <p>
-            <strong>Phone:</strong> {selectedApp.sponsorPhone}{" "}
-            {isValidPhone(selectedApp.sponsorPhone) ? (
-              <span style={{ color: "green" }}>✅</span>
-            ) : (
-              <span style={{ color: "red" }}>❌</span>
-            )}
+            <strong>Phone:</strong> {selectedApp.sponsorPhone || "N/A"}{" "}
+            {isValidPhone(selectedApp.sponsorPhone) ? <span style={{ color: "green" }}>✅</span> :
+              <span style={{ color: "red" }}>❌</span>}
           </p>
-          <p><strong>Email:</strong> {selectedApp.sponsorEmail}</p>
+          <p><strong>Email:</strong> {selectedApp.sponsorEmail || "N/A"}</p>
           <p>
             <strong>Photo:</strong><br />
             {selectedApp.sponsorPhoto ? (
               typeof selectedApp.sponsorPhoto === "string" ? (
-                <img
-                  src={selectedApp.sponsorPhoto}
-                  alt="Sponsor"
-                  style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
-                />
+                <img src={selectedApp.sponsorPhoto} alt="Sponsor" style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }} />
               ) : (
-                <img
-                  src={URL.createObjectURL(selectedApp.sponsorPhoto)}
-                  alt="Sponsor"
-                  style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }}
-                />
+                <img src={URL.createObjectURL(selectedApp.sponsorPhoto)} alt="Sponsor" style={{ width: "120px", marginTop: "5px", borderRadius: "5px" }} />
               )
-            ) : (
-              "No photo uploaded"
-            )}
+            ) : "No photo uploaded"}
           </p>
           <button onClick={() => setSelectedApp(null)}>Close</button>
         </div>
