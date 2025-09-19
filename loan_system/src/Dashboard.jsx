@@ -4,19 +4,33 @@ const Dashboard = ({ state, setState, setPage }) => {
   const [userLoans, setUserLoans] = useState([]);
 
   useEffect(() => {
-    // Filter loans only for the current user
-    const userApplications = state.applications.filter(
-      (app) =>
-        app.name === state.currentUser &&
-        app.approvedAmount && // only show if approvedAmount exists
-        app.status === "approved" // only show approved
-    );
-    setUserLoans(userApplications);
-  }, [state.applications, state.currentUser]);
+    if (!state.currentUser || !state.applications) return;
+
+    let filteredLoans = [];
+
+    if (state.isAdmin) {
+      // Admin anaona loans zote
+      filteredLoans = state.applications;
+    } else {
+      // User anaona loans zake tu
+      filteredLoans = state.applications.filter(
+        (loan) =>
+          loan.applicant === state.currentUser.id &&
+          loan.status === "approved"
+      );
+    }
+
+    setUserLoans(filteredLoans);
+  }, [state.applications, state.currentUser, state.isAdmin]);
+
+  if (!state.currentUser) {
+    return <p>Please login to see your dashboard.</p>;
+  }
 
   return (
     <div className="dashboard-box">
-      <h2>My Loans</h2>
+      <h2>{state.isAdmin ? "All Loan Applications" : "My Loans"}</h2>
+
       {userLoans.length === 0 ? (
         <p>No loans found</p>
       ) : (
@@ -46,7 +60,8 @@ const Dashboard = ({ state, setState, setPage }) => {
               <strong>Remaining Balance:</strong> ${loan.remainingBalance?.toLocaleString()}
             </p>
 
-            {loan.status === "approved" && (
+            {/* Actions */}
+            {!state.isAdmin && loan.status === "approved" && (
               <>
                 <button onClick={() => setPage("repayment")}>
                   Make Payment

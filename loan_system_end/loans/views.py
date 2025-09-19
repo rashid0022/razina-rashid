@@ -18,9 +18,11 @@ from .serializers import (
 )
 from .permissions import IsOwnerOrAdmin
 
+
 # ================= Home view =================
 @ensure_csrf_cookie
 def home(request):
+    """Redirect to frontend home page"""
     return redirect("http://localhost:5173")
 
 
@@ -28,11 +30,9 @@ def home(request):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def get_csrf_token(request):
+    """Return CSRF token for frontend"""
     token = get_token(request)
-    response = Response({'csrfToken': token})
-    response["Access-Control-Allow-Origin"] = "http://localhost:5173"
-    response["Access-Control-Allow-Credentials"] = "true"
-    return response
+    return Response({'csrfToken': token})
 
 
 # ================= Login =================
@@ -47,29 +47,26 @@ def user_login(request):
                         status=status.HTTP_400_BAD_REQUEST)
 
     user = authenticate(request, username=username, password=password)
-    if user:
-        login(request, user)
+    if not user:
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Build user data manually to include admin flags
-        user_data = {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'phone': user.phone,
-            'address': user.address,
-            'profile_photo': request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
-            'is_admin': getattr(user, 'is_admin', False),
-            'is_superuser': user.is_superuser,
-            'is_staff': user.is_staff,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-        }
+    login(request, user)
 
-        return Response({
-            'message': 'Login successful',
-            'user': user_data
-        })
-    return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+    user_data = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'phone': user.phone,
+        'address': user.address,
+        'profile_photo': request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
+        'is_admin': user.is_staff or user.is_superuser,
+        'is_superuser': user.is_superuser,
+        'is_staff': user.is_staff,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+    }
+
+    return Response({'message': 'Login successful', 'user': user_data})
 
 
 # ================= User Registration =================
@@ -87,17 +84,14 @@ def user_register(request):
         'phone': user.phone,
         'address': user.address,
         'profile_photo': request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
-        'is_admin': getattr(user, 'is_admin', False),
+        'is_admin': user.is_staff or user.is_superuser,
         'is_superuser': user.is_superuser,
         'is_staff': user.is_staff,
         'first_name': user.first_name,
         'last_name': user.last_name,
     }
 
-    return Response({
-        'message': 'User created successfully',
-        'user': user_data
-    }, status=status.HTTP_201_CREATED)
+    return Response({'message': 'User created successfully', 'user': user_data}, status=status.HTTP_201_CREATED)
 
 
 # ================= Register + Apply Loan =================
@@ -108,12 +102,8 @@ def register_and_apply(request):
     serializer.is_valid(raise_exception=True)
     result = serializer.save()
 
-    # Auto-login after registration
-    user = authenticate(
-        request,
-        username=request.data.get('username'),
-        password=request.data.get('password')
-    )
+    # Auto-login
+    user = authenticate(request, username=request.data.get('username'), password=request.data.get('password'))
     if user:
         login(request, user)
 
@@ -124,7 +114,7 @@ def register_and_apply(request):
         'phone': result['user'].phone,
         'address': result['user'].address,
         'profile_photo': request.build_absolute_uri(result['user'].profile_photo.url) if result['user'].profile_photo else None,
-        'is_admin': getattr(result['user'], 'is_admin', False),
+        'is_admin': result['user'].is_staff or result['user'].is_superuser,
         'is_superuser': result['user'].is_superuser,
         'is_staff': result['user'].is_staff,
         'first_name': result['user'].first_name,
@@ -135,35 +125,33 @@ def register_and_apply(request):
     if result['loan_application'].sponsor_photo:
         loan_data['sponsor_photo'] = request.build_absolute_uri(result['loan_application'].sponsor_photo.url)
 
-    return Response({
-        "user": user_data,
-        "loan_application": loan_data
-    }, status=201)
+    return Response({'user': user_data, 'loan_application': loan_data}, status=status.HTTP_201_CREATED)
 
 
 # ================= DRF ViewSets =================
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAdminUser]  # Only admin/staff
+
+    def list(self, request, *args, **kwargs):
+        # Debug: print request user
+        print("User making request:", request.user, "is_staff:", request.user.is_staff)
+        return super().list(request, *args, **kwargs)
 
 
 class LoanApplicationViewSet(viewsets.ModelViewSet):
     queryset = LoanApplication.objects.all()
     serializer_class = LoanApplicationSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrAdmin]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated:
-            if user.is_staff or user.is_superuser:
-                return LoanApplication.objects.all()
-            return LoanApplication.objects.filter(applicant=user)
-        return LoanApplication.objects.none()
+        if user.is_staff or user.is_superuser:
+            return LoanApplication.objects.all()
+        return LoanApplication.objects.filter(applicant=user)
 
     def perform_create(self, serializer):
-        if not self.request.user.is_authenticated:
-            raise serializers.ValidationError("User must be logged in to apply")
         serializer.save(applicant=self.request.user)
 
 
@@ -181,7 +169,10 @@ class PaymentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         loan_id = self.request.data.get('loan')
         try:
-            loan = LoanApplication.objects.get(id=loan_id, applicant=self.request.user)
+            if self.request.user.is_staff or self.request.user.is_superuser:
+                loan = LoanApplication.objects.get(id=loan_id)
+            else:
+                loan = LoanApplication.objects.get(id=loan_id, applicant=self.request.user)
             serializer.save(loan=loan)
         except LoanApplication.DoesNotExist:
-            raise serializers.ValidationError("Loan not found or you don't have permission")
+            raise serializers.ValidationError("Loan not found or permission denied")

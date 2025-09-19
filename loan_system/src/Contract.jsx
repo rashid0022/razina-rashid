@@ -1,5 +1,5 @@
 import React from "react";
-
+import api from "./api";
 const Contract = ({ state, setState, setPage, showNotification }) => {
   // Pata mkopo wa sasa wa mtumiaji ulioidhinishwa
   const approvedLoan = state.applications.find(

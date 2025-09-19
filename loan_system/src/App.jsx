@@ -42,10 +42,45 @@ function App() {
   };
 
   // ----------------------
+  // Persistent login + CSRF
+  // ----------------------
+  useEffect(() => {
+    const init = async () => {
+      // Get CSRF token
+      try {
+        const res = await api.get("/csrf/");
+        api.defaults.headers.post["X-CSRFToken"] = res.data.csrfToken;
+        console.log("CSRF token set:", res.data.csrfToken);
+      } catch (err) {
+        console.error("Failed to fetch CSRF token:", err);
+      }
+
+      // Restore user from localStorage
+      const savedUser = localStorage.getItem("currentUser");
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        setState((prev) => ({
+          ...prev,
+          currentUser: user,
+          isAdmin: user.is_superuser || user.is_staff || user.is_admin,
+        }));
+        setPage(
+          user.is_superuser || user.is_staff || user.is_admin
+            ? "admin-panel"
+            : "dashboard"
+        );
+      }
+    };
+
+    init();
+  }, []);
+
+  // ----------------------
   // Logout handler
   // ----------------------
   const handleLogout = () => {
     setState((prev) => ({ ...prev, currentUser: null, isAdmin: false }));
+    localStorage.removeItem("currentUser");
     setPage("home");
     showNotification("Logged out successfully", "success");
   };
@@ -54,34 +89,19 @@ function App() {
   // Fetch loan applications
   // ----------------------
   useEffect(() => {
+    if (!state.currentUser) return;
+
     const fetchLoans = async () => {
       try {
-        console.log("Fetching loans from API...");
         const res = await api.get("loans/");
-        console.log("Loans fetched successfully:", res.data);
         setState((prev) => ({ ...prev, applications: res.data }));
       } catch (err) {
-        console.error("Error in fetchLoans:", err);
-        
-        if (err.response) {
-          // Server responded with an error
-          console.error("Error response:", err.response.data);
-          showNotification(
-            `Error fetching loans: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
-            "error"
-          );
-        } else if (err.request) {
-          console.error("No response received:", err.request);
-          showNotification("No response from server while fetching loans. Is Django running?", "error");
-        } else {
-          console.error("Error:", err.message);
-          showNotification(`Error: ${err.message}`, "error");
-        }
+        console.error("Error fetching loans:", err);
+        showNotification("Error fetching loans", "error");
       }
     };
-    
     fetchLoans();
-  }, []);
+  }, [state.currentUser]);
 
   // ----------------------
   // Fetch users if admin
@@ -98,24 +118,10 @@ function App() {
         });
         setState((prev) => ({ ...prev, users: usersObj }));
       } catch (err) {
-        console.error("Error in fetchUsers:", err);
-        
-        if (err.response) {
-          console.error("Error fetching users:", err.response.data);
-          showNotification(
-            `Error fetching users: ${err.response.status} - ${JSON.stringify(err.response.data)}`,
-            "error"
-          );
-        } else if (err.request) {
-          console.error("No response received:", err.request);
-          showNotification("No response from server while fetching users", "error");
-        } else {
-          console.error("Error:", err.message);
-          showNotification(`Error: ${err.message}`, "error");
-        }
+        console.error("Error fetching users:", err);
+        showNotification("Error fetching users. Ensure you are logged in as admin.", "error");
       }
     };
-
     fetchUsers();
   }, [state.isAdmin]);
 
@@ -143,7 +149,7 @@ function App() {
             />
           )}
 
-          {/* Login */}
+          {/* User Login */}
           {page === "login" && (
             <Login
               state={state}
@@ -157,12 +163,12 @@ function App() {
           {/* Admin Login */}
           {page === "admin-login" && (
             <AdminLogin
-              onAdminLogin={() => {
-                setState((prev) => ({ ...prev, isAdmin: true }));
+              onAdminLogin={(user) => {
+                setState((prev) => ({ ...prev, currentUser: user, isAdmin: true }));
+                localStorage.setItem("currentUser", JSON.stringify(user));
                 setPage("admin-panel");
                 showNotification("Admin logged in successfully", "success");
               }}
-              api={api}
             />
           )}
 
@@ -178,7 +184,12 @@ function App() {
 
           {/* Dashboard */}
           {page === "dashboard" && (
-            <Dashboard state={state} setState={setState} setPage={setPage} api={api} />
+            <Dashboard
+              state={state}
+              setState={setState}
+              setPage={setPage}
+              api={api}
+            />
           )}
 
           {/* Repayment */}

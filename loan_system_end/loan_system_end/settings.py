@@ -108,12 +108,11 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # ==================== CSRF & SESSION COOKIES (DEV) ====================
-# ⚠️ Development: HTTP only, local testing
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_HTTPONLY = False    # React frontend needs access
 CSRF_COOKIE_SECURE = False      # False for HTTP localhost
 CSRF_COOKIE_SAMESITE = 'Lax'    # Works on localhost
 
-SESSION_COOKIE_HTTPONLY = True  # Keep session cookie secure
-SESSION_COOKIE_SECURE = False   # False for HTTP localhost
+SESSION_COOKIE_HTTPONLY = True   # Keeps session cookie safe
+SESSION_COOKIE_SECURE = False    # False for HTTP localhost
 SESSION_COOKIE_SAMESITE = 'Lax'

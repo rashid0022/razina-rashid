@@ -1,16 +1,26 @@
+// src/AdminLogin.jsx
 import React, { useEffect, useState } from "react";
 import api from "./api";
 
 const AdminLogin = ({ onAdminLogin }) => {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   // Pata CSRF token wakati component inarender
   useEffect(() => {
-    api.get("/csrf/")
-      .then(res => console.log("CSRF token:", res.data.csrfToken))
-      .catch(console.error);
+    const fetchCSRF = async () => {
+      try {
+        const res = await api.get("/csrf/");
+        const token = res.data.csrfToken;
+        api.defaults.headers.post["X-CSRFToken"] = token;
+        console.log("CSRF token set:", token);
+      } catch (err) {
+        console.error("Failed to fetch CSRF token:", err);
+      }
+    };
+
+    fetchCSRF();
 
     // Angalia kama user tayari ame login
     const storedUser = JSON.parse(localStorage.getItem("currentUser"));
@@ -22,28 +32,36 @@ const AdminLogin = ({ onAdminLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
       const res = await api.post("/login/", { username, password });
-      const user = res.data.user || res.data;
+      const user = res.data.user;
 
       if (user && (user.is_superuser || user.is_staff || user.is_admin)) {
         // Save user info locally
         localStorage.setItem("currentUser", JSON.stringify(user));
         onAdminLogin(user);
       } else {
-        setError("Huna ruhusa ya admin");
+        setError("You do not have admin permissions");
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError("Username au password si sahihi");
+
+      if (err.response) {
+        // Backend returned a response
+        setError(err.response.data.error || "Login failed");
+      } else {
+        setError("Network error. Could not reach server.");
+      }
     }
   };
 
   return (
-    <div>
+    <div className="admin-login-box">
       <h2>Admin Login</h2>
       <form onSubmit={handleSubmit}>
         <input
+          type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}

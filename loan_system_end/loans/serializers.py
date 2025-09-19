@@ -148,14 +148,10 @@ class RegisterAndApplySerializer(serializers.Serializer):
 
 
 # ===== Payment Serializer =====
+from rest_framework import serializers
+from .models import Payment
+
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = [
-            'id',
-            'loan',
-            'amount',
-            'payment_date',
-            'method',
-            'notes',
-        ]
+        fields = ['id', 'loan', 'amount', 'phone', 'date']
