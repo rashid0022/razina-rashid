@@ -5,8 +5,11 @@ from django.core.files.base import ContentFile
 import base64
 from .models import User, LoanApplication, Payment
 
+
 # ===== User Serializers =====
 class UserSerializer(serializers.ModelSerializer):
+    profile_photo = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -14,6 +17,11 @@ class UserSerializer(serializers.ModelSerializer):
             'profile_photo', 'is_admin', 'national_id', 'first_name', 'last_name'
         ]
         read_only_fields = ['is_admin']
+
+    def get_profile_photo(self, obj):
+        if obj.profile_photo:
+            return obj.profile_photo.url
+        return None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -33,18 +41,29 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 # ===== Loan Application Serializer =====
 class LoanApplicationSerializer(serializers.ModelSerializer):
+    sponsor_photo = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+
     class Meta:
         model = LoanApplication
-        fields = '__all__'
-        read_only_fields = ['applicant', 'created_at', 'updated_at', 'sponsor_photo']
+        fields = [
+            'id', 'name', 'loan_type', 'requested_amount', 'approved_amount',
+            'interest_rate', 'term', 'monthly_payment', 'remaining_balance',
+            'amount_paid', 'status', 'contract_accepted', 'created_at',
+            'assets_value', 'monthly_income',
+            'sponsor_name', 'sponsor_address', 'sponsor_national_id',
+            'sponsor_phone', 'sponsor_email', 'sponsor_photo'
+        ]
 
+    def get_sponsor_photo(self, obj):
+        if obj.sponsor_photo:
+            return obj.sponsor_photo.url
+        return None
 
-# ===== Payment Serializer =====
-class PaymentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Payment
-        fields = '__all__'
-        read_only_fields = ['created_at', 'updated_at']
+    def get_name(self, obj):
+        if obj.applicant:
+            return obj.applicant.get_full_name() or obj.applicant.username
+        return None
 
 
 # ===== Register & Apply Serializer =====
@@ -74,13 +93,13 @@ class RegisterAndApplySerializer(serializers.Serializer):
     sponsor_email = serializers.EmailField()
     sponsor_photo = serializers.CharField(required=False, allow_null=True)  # base64
 
-    # ===== Helper method to save base64 photos safely =====
+    # ===== Helper: save base64 image =====
     def save_base64_image(self, instance, base64_data, filename_field, prefix):
         if base64_data:
             try:
                 if ';base64,' in base64_data:
                     format, imgstr = base64_data.split(';base64,')
-                else:  # fallback if format missing
+                else:
                     imgstr = base64_data
                     format = 'data:image/png'
                 ext = format.split('/')[-1]
@@ -126,3 +145,17 @@ class RegisterAndApplySerializer(serializers.Serializer):
         self.save_base64_image(loan, sponsor_photo_data, 'sponsor_photo', user.username)
 
         return {'user': user, 'loan_application': loan}
+
+
+# ===== Payment Serializer =====
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = [
+            'id',
+            'loan',
+            'amount',
+            'payment_date',
+            'method',
+            'notes',
+        ]

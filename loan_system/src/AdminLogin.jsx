@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "./api"; // ← tumia api instance
+import api from "./api";
 
 const AdminLogin = ({ onAdminLogin }) => {
   const [username, setUsername] = useState("admin");
@@ -8,9 +8,15 @@ const AdminLogin = ({ onAdminLogin }) => {
 
   // Pata CSRF token wakati component inarender
   useEffect(() => {
-    api.get("/csrf/") // ← tumia api instance badala ya axios
+    api.get("/csrf/")
       .then(res => console.log("CSRF token:", res.data.csrfToken))
       .catch(console.error);
+
+    // Angalia kama user tayari ame login
+    const storedUser = JSON.parse(localStorage.getItem("currentUser"));
+    if (storedUser && (storedUser.is_admin || storedUser.is_superuser || storedUser.is_staff)) {
+      onAdminLogin(storedUser);
+    }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -18,10 +24,11 @@ const AdminLogin = ({ onAdminLogin }) => {
     setError("");
     try {
       const res = await api.post("/login/", { username, password });
-      console.log("Login response:", res.data);
+      const user = res.data.user || res.data;
 
-      const user = res.data.user;
-      if (user && (user.is_superuser || user.is_staff)) {
+      if (user && (user.is_superuser || user.is_staff || user.is_admin)) {
+        // Save user info locally
+        localStorage.setItem("currentUser", JSON.stringify(user));
         onAdminLogin(user);
       } else {
         setError("Huna ruhusa ya admin");
@@ -39,14 +46,14 @@ const AdminLogin = ({ onAdminLogin }) => {
         <input
           placeholder="Username"
           value={username}
-          onChange={e => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value)}
           required
         />
         <input
           type="password"
           placeholder="Password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
         <button type="submit">Login</button>

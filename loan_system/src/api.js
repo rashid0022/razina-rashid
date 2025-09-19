@@ -2,31 +2,32 @@ import axios from "axios";
 
 // 1️⃣ Axios instance
 const api = axios.create({
-  baseURL: "http://localhost:8000/api", // base URL ya backend
-  withCredentials: true,                 // ✅ muhimu kwa CSRF cookies
+  baseURL: "http://localhost:8000/api", // Base URL ya backend
+  withCredentials: true, // Muhimu kwa CSRF cookies
 });
 
-// 2️⃣ Helper: pata cookie kwa jina
+// 2️⃣ Helper: pata cookie kwa jina fulani
 function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-      cookie = cookie.trim();
-      if (cookie.startsWith(name + "=")) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
+  if (!document.cookie) return null;
+
+  const cookies = document.cookie.split(";").map(c => c.trim());
+  for (const cookie of cookies) {
+    if (cookie.startsWith(`${name}=`)) {
+      return decodeURIComponent(cookie.substring(name.length + 1));
     }
   }
-  return cookieValue;
+  return null;
 }
 
 // 3️⃣ Request interceptor: ongeza CSRF token
 api.interceptors.request.use(
   (config) => {
     const csrfToken = getCookie("csrftoken");
-    if (csrfToken && ["post", "put", "patch", "delete"].includes(config.method?.toLowerCase())) {
+    // weka token kwa requests zinazohitaji (POST, PUT, PATCH, DELETE)
+    if (
+      csrfToken &&
+      ["post", "put", "patch", "delete"].includes(config.method?.toLowerCase())
+    ) {
       config.headers["X-CSRFToken"] = csrfToken;
     }
     return config;
@@ -42,17 +43,22 @@ api.interceptors.response.use(
       const status = error.response.status;
       if (status === 401 || status === 403) {
         console.error("Authentication/CSRF error:", error.response);
-        // Optional: redirect to login page
-        window.location.href = "/#login";
+        // Optional: unaweza redirect user kwenda login page
+        // window.location.href = "/#login";
       }
+    } else if (error.request) {
+      console.error("Hakuna response kutoka server:", error.request);
+    } else {
+      console.error("Error wakati wa ku-set up request:", error.message);
     }
     return Promise.reject(error);
   }
 );
 
-// 5️⃣ Optional: fetch CSRF token once at app start
+// 5️⃣ Fetch CSRF token mara moja app inapoanza
+// (Hii haina madhara hata ukiacha)
 api.get("/csrf/")
-  .then((res) => console.log("CSRF token fetched:", res.data.csrfToken))
+  .then((res) => console.log("CSRF token fetched:", res.data))
   .catch((err) => console.error("CSRF fetch error:", err));
 
 export default api;
