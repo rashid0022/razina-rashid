@@ -69,7 +69,7 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
       const last_name = rest.join(" ");
 
       
-      const payload = {
+     const payload = {
         username: state.tempApplicant.username,
         password: state.tempApplicant.password,
         email: state.tempApplicant.email,
