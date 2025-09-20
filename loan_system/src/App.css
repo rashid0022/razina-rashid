@@ -7,7 +7,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #d4e2e5 0%, #9be2f4 100%);
     color: #333;
     line-height: 1.6;
     min-height: 100vh;
@@ -22,7 +22,7 @@ body {
 
 /* Navigation */
 .main-nav {
-    background: linear-gradient(90deg, #2c3e50, #3498db);
+    background: linear-gradient(90deg, #2c3e50, #db3495);
     padding: 15px;
     border-radius: 8px;
     display: flex;
@@ -46,7 +46,7 @@ body {
 }
 
 .nav-button {
-    background: #e74c3c;
+    background: linear-gradient(90deg, #e73ce1, #c0392b);
     color: white;
     border: none;
     padding: 10px 18px;
@@ -85,7 +85,7 @@ input, select {
     width: 100%;
     padding: 14px;
     margin: 12px 0;
-    border: 2px solid #ddd;
+    border: 2px solid #f6f2f2;
     border-radius: 8px;
     font-size: 16px;
     transition: all 0.3s ease;
@@ -132,7 +132,7 @@ button:hover {
     padding: 20px;
     background: #f8f9fa;
     border-radius: 8px;
-    border-left: 4px solid #3498db;
+    border-left: 4px solid #a634db;
     margin-bottom: 20px;
     transition: transform 0.3s ease;
 }
