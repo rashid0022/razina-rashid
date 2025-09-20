@@ -1,17 +1,17 @@
 // api.js
 import axios from "axios";
 
-// ================= 1️⃣ Axios instance =================
+
 const api = axios.create({
   baseURL: "http://localhost:8000/api",
-  withCredentials: true, // Muhimu kwa CSRF cookies na session
+  withCredentials: true, 
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
 });
 
-// ================= 2️⃣ Helper: pata cookie kwa jina fulani =================
+
 export function getCookie(name) {
   if (!document.cookie) return null;
   const cookies = document.cookie.split(";").map(c => c.trim());
@@ -23,7 +23,7 @@ export function getCookie(name) {
   return null;
 }
 
-// ================= 3️⃣ Request interceptor: ongeza CSRF token =================
+
 api.interceptors.request.use(
   (config) => {
     const csrfToken = getCookie("csrftoken");
@@ -36,7 +36,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ================= 4️⃣ Response interceptor: handle errors globally =================
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -58,23 +58,23 @@ api.interceptors.response.use(
   }
 );
 
-// ================= 5️⃣ Fetch CSRF token on app start =================
+
 async function fetchCsrfToken() {
   if (!getCookie("csrftoken")) {
     try {
       const res = await api.get("/csrf/");
       console.log("✅ CSRF token fetched from backend:", res.data.csrfToken);
-      // Now the token is saved in cookie and ready for POST/PUT/PATCH/DELETE
+     
     } catch (err) {
       console.error("❌ CSRF fetch error:", err);
     }
   }
 }
 
-// Call it once when this file is imported
+
 fetchCsrfToken();
 
-// ================= 6️⃣ Optional helper: safe API call with CSRF retry =================
+
 export async function safeApiCall(requestFn) {
   try {
     return await requestFn();
@@ -88,34 +88,34 @@ export async function safeApiCall(requestFn) {
   }
 }
 
-// ================= 7️⃣ Example usage =================
-// Login example
+
+
 export async function loginUser(username, password) {
   return safeApiCall(() =>
     api.post("/login/", { username, password })
   );
 }
 
-// Fetch users example (admin only)
+
 export async function fetchUsers() {
   return safeApiCall(() =>
     api.get("/users/")
   );
 }
 
-// Apply loan example
+
 export async function applyLoan(loanData) {
   return safeApiCall(() =>
     api.post("/loans/", loanData)
   );
 }
 
-// Update loan example
+
 export async function updateLoan(loanId, data) {
   return safeApiCall(() =>
     api.patch(`/loans/${loanId}/`, data)
   );
 }
 
-// ✅ Default export
+
 export default api;

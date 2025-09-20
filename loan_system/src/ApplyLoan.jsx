@@ -9,7 +9,7 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [csrfToken, setCsrfToken] = useState("");
 
-  // Get CSRF token on mount
+ 
   useEffect(() => {
     api.get("csrf/")
       .then(res => setCsrfToken(res.data.csrfToken))
@@ -64,11 +64,11 @@ export default function ApplyLoan({ state, setState, showNotification, setPage }
     setIsSubmitting(true);
 
     try {
-      // Split full name into first_name and last_name
+     
       const [first_name, ...rest] = state.tempApplicant.name.split(" ");
       const last_name = rest.join(" ");
 
-      // Payload matches RegisterAndApplySerializer
+      
       const payload = {
         username: state.tempApplicant.username,
         password: state.tempApplicant.password,

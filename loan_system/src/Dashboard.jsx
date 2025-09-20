@@ -9,10 +9,10 @@ const Dashboard = ({ state, setState, setPage }) => {
     let filteredLoans = [];
 
     if (state.isAdmin) {
-      // Admin anaona loans zote
+      
       filteredLoans = state.applications;
     } else {
-      // User anaona loans zake tu
+    
       filteredLoans = state.applications.filter(
         (loan) =>
           loan.applicant === state.currentUser.id &&

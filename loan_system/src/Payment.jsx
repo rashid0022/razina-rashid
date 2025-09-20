@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import api from "./api"; // Axios instance yako iliyosetup CSRF
+import api from "./api"; 
 
 const PaymentForm = ({ loanId, currentBalance, onPaymentSuccess }) => {
   const [phone, setPhone] = useState("");
   const [amount, setAmount] = useState("");
-  const [debt, setDebt] = useState(currentBalance); // initial remaining balance
+  const [debt, setDebt] = useState(currentBalance); 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -14,7 +14,7 @@ const PaymentForm = ({ loanId, currentBalance, onPaymentSuccess }) => {
 
     const trimmedPhone = phone.trim();
 
-    // Validate phone number format
+    
     if (!/^\+255\d{9}$/.test(trimmedPhone)) {
       setMessage("Phone number must be in the format +255XXXXXXXXX");
       return;
@@ -39,7 +39,7 @@ const PaymentForm = ({ loanId, currentBalance, onPaymentSuccess }) => {
         phone: trimmedPhone,
       });
 
-      // Update frontend debt
+      
       const newDebt = debt - paymentAmount;
       setDebt(newDebt);
       setMessage(`Payment of $${paymentAmount.toLocaleString()} successful! Remaining balance: $${newDebt.toLocaleString()}`);

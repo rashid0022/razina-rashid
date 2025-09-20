@@ -11,7 +11,7 @@ import Dashboard from "./Dashboard";
 import Repayment from "./Repayment";
 import Notification from "./Notification";
 import Contract from "./Contract";
-import api from "./api"; // Axios instance
+import api from "./api"; 
 import "./App.css";
 
 function App() {
@@ -33,20 +33,16 @@ function App() {
   const [page, setPage] = useState("home");
   const [notification, setNotification] = useState(null);
 
-  // ----------------------
-  // Notifications helper
-  // ----------------------
+  
   const showNotification = (msg, type = "success") => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // ----------------------
-  // Persistent login + CSRF
-  // ----------------------
+  
   useEffect(() => {
     const init = async () => {
-      // Get CSRF token
+      
       try {
         const res = await api.get("/csrf/");
         api.defaults.headers.post["X-CSRFToken"] = res.data.csrfToken;
@@ -55,7 +51,7 @@ function App() {
         console.error("Failed to fetch CSRF token:", err);
       }
 
-      // Restore user from localStorage
+      
       const savedUser = localStorage.getItem("currentUser");
       if (savedUser) {
         const user = JSON.parse(savedUser);
@@ -75,9 +71,7 @@ function App() {
     init();
   }, []);
 
-  // ----------------------
-  // Logout handler
-  // ----------------------
+  
   const handleLogout = () => {
     setState((prev) => ({ ...prev, currentUser: null, isAdmin: false }));
     localStorage.removeItem("currentUser");
@@ -85,9 +79,7 @@ function App() {
     showNotification("Logged out successfully", "success");
   };
 
-  // ----------------------
-  // Fetch loan applications
-  // ----------------------
+  
   useEffect(() => {
     if (!state.currentUser) return;
 
@@ -103,9 +95,7 @@ function App() {
     fetchLoans();
   }, [state.currentUser]);
 
-  // ----------------------
-  // Fetch users if admin
-  // ----------------------
+  
   useEffect(() => {
     if (!state.isAdmin) return;
 

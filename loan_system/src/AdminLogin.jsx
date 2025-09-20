@@ -7,7 +7,7 @@ const AdminLogin = ({ onAdminLogin }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // Pata CSRF token wakati component inarender
+  
   useEffect(() => {
     const fetchCSRF = async () => {
       try {
@@ -22,7 +22,6 @@ const AdminLogin = ({ onAdminLogin }) => {
 
     fetchCSRF();
 
-    // Angalia kama user tayari ame login
     const storedUser = JSON.parse(localStorage.getItem("currentUser"));
     if (storedUser && (storedUser.is_admin || storedUser.is_superuser || storedUser.is_staff)) {
       onAdminLogin(storedUser);
@@ -38,7 +37,7 @@ const AdminLogin = ({ onAdminLogin }) => {
       const user = res.data.user;
 
       if (user && (user.is_superuser || user.is_staff || user.is_admin)) {
-        // Save user info locally
+       
         localStorage.setItem("currentUser", JSON.stringify(user));
         onAdminLogin(user);
       } else {
@@ -48,7 +47,7 @@ const AdminLogin = ({ onAdminLogin }) => {
       console.error("Login error:", err);
 
       if (err.response) {
-        // Backend returned a response
+       
         setError(err.response.data.error || "Login failed");
       } else {
         setError("Network error. Could not reach server.");

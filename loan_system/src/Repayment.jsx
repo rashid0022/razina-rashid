@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import api from "./api"; // Axios instance
+import api from "./api"; 
 
 const Repayment = ({ state, setState, showNotification }) => {
   const [paymentInfo, setPaymentInfo] = useState({ phone: "", amount: "" });
   const [error, setError] = useState("");
 
-  // Only show approved loans for the current user
+  
   const loans = state.applications.filter(
     (loan) =>
       loan.status === "approved" &&
@@ -23,13 +23,13 @@ const Repayment = ({ state, setState, showNotification }) => {
 
     const { phone, amount } = paymentInfo;
 
-    // Validate phone number format
+    
     if (!/^\+255\d{9}$/.test(phone.trim())) {
       setError("Phone number must be in the format +255XXXXXXXXX");
       return;
     }
 
-    // Validate payment amount
+   
     const paymentAmount = parseFloat(amount);
     if (!paymentAmount || paymentAmount <= 0) {
       setError("Please enter a valid payment amount");

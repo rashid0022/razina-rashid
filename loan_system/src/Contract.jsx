@@ -1,7 +1,7 @@
 import React from "react";
 import api from "./api";
 const Contract = ({ state, setState, setPage, showNotification }) => {
-  // Pata mkopo wa sasa wa mtumiaji ulioidhinishwa
+ 
   const approvedLoan = state.applications.find(
     app => app.name === state.currentUser && app.status === "approved"
   );
@@ -9,7 +9,7 @@ const Contract = ({ state, setState, setPage, showNotification }) => {
   if (!approvedLoan) return <p>No contract available</p>;
 
   const handleAgree = () => {
-    // Weka status ya contract kuwa "accepted"
+    
     const updatedApplications = state.applications.map(app => {
       if (app.id === approvedLoan.id) {
         return { ...app, contractAccepted: true };
@@ -23,7 +23,7 @@ const Contract = ({ state, setState, setPage, showNotification }) => {
   };
 
   const handleDisagree = () => {
-    // Weka status ya contract kuwa "rejected"
+  
     const updatedApplications = state.applications.map(app => {
       if (app.id === approvedLoan.id) {
         return { ...app, contractAccepted: false, status: "contract_rejected" };

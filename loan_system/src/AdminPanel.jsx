@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "./api"; // Axios instance with CSRF
-// ---------------------- Helpers ----------------------
+import api from "./api"; 
 const isValidNationalId = (id) => /^\d{20}$/.test(id);
 const isValidPhone = (phone) => /^\+255\d{9}$/.test(phone);
 
@@ -15,7 +14,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
   const [applications, setApplications] = useState([]);
   const [selectedApp, setSelectedApp] = useState(null);
 
-  // ---------------------- Fetch pending applications ----------------------
+ 
   const fetchApplications = async () => {
     try {
       const res = await api.get("/loans/?status=pending");
@@ -30,7 +29,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
     fetchApplications();
   }, []);
 
-  // ---------------------- Approve loan ----------------------
+
   const handleApprove = async (app) => {
     try {
       const loanTypeKey = app.loanType || "home";
@@ -68,7 +67,7 @@ const AdminPanel = ({ state, setState, showNotification }) => {
     }
   };
 
-  // ---------------------- Reject loan ----------------------
+
   const handleReject = async (app) => {
     try {
       await api.patch(`/loans/${app.id}/`, { status: "rejected" });
@@ -80,10 +79,10 @@ const AdminPanel = ({ state, setState, showNotification }) => {
     }
   };
 
-  // ---------------------- View sponsor details ----------------------
+ 
   const viewSponsorDetails = (app) => setSelectedApp(app);
 
-  // ---------------------- Render ----------------------
+ 
   return (
     <div className="admin-box">
       <h2>Admin Panel</h2>

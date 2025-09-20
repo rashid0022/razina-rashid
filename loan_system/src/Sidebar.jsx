@@ -15,7 +15,7 @@ export default function Sidebar({ state }) {
   allPayments.sort((a, b) => new Date(b.date) - new Date(a.date));
   const recentPayments = allPayments.slice(0, 3);
 
-  // ✅ Progress calculation logic
+  
   let progressPercent = 0;
   let nextPaymentDue = "No upcoming payments";
 
@@ -26,16 +26,16 @@ export default function Sidebar({ state }) {
     const term = app.term || 1;
     const remainingBalance = app.remainingBalance || 0;
     
-    // Calculate total payable amount
+   
     const totalPayable = principal * (1 + (interestRate / 100) * (term / 12));
     
-    // Calculate amount already paid
+   
     const paidAmount = totalPayable - remainingBalance;
     
-    // Calculate progress percentage
+    
     progressPercent = totalPayable > 0 ? ((paidAmount / totalPayable) * 100) : 0;
     
-    // Next payment due (today + 30 days)
+    
     const nextDueDate = new Date();
     nextDueDate.setDate(nextDueDate.getDate() + 30);
     nextPaymentDue = `Payment of $${app.monthlyPayment?.toLocaleString() || 0} is due on ${nextDueDate.toLocaleDateString()}`;
